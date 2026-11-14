@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import hashlib
 import time
 import random
 from pathlib import Path
@@ -49,7 +50,9 @@ print("=" * 85)
 # ==============================================================================
 # 1. EXTRACT DATA WITH MULTI-HORIZON & MULTI-HISTORY SUPPORT
 # ==============================================================================
-def extract_dataset_windows_flexible(csv_path, id_cols, time_col, x_col, stride=15, max_trajs=300, split_unit="trajectory"):
+def extract_dataset_windows_flexible(csv_path, id_cols, time_col, x_col, y_col, stride=15, max_trajs=300, split_unit="trajectory"):
+    csv_path = Path(csv_path)
+    source_sha256 = hashlib.sha256(csv_path.read_bytes()).hexdigest()
     df = pd.read_csv(csv_path)
     if isinstance(id_cols, list):
         groups = df.groupby(id_cols)
@@ -220,6 +223,8 @@ def extract_dataset_windows_flexible(csv_path, id_cols, time_col, x_col, stride=
                 "split": split_name,
                 "trajectory_id": str(key),
                 "recording_id": recording_id,
+                "source_file": csv_path.name,
+                "source_file_sha256": source_sha256,
             })
             if recording_id:
                 recording_to_splits.setdefault(recording_id, set()).add(split_name)
@@ -243,7 +248,9 @@ def extract_dataset_windows_flexible(csv_path, id_cols, time_col, x_col, stride=
         "train_recording_ids": split_audit.get("train_recording_ids", []),
         "val_recording_ids": split_audit.get("val_recording_ids", []),
         "test_recording_ids": split_audit.get("test_recording_ids", []),
-        "session_level_inference": "RUN_DISJOINT_SPLIT_ONLY; INDEPENDENT_RUN INFERENCE REQUIRES MULTIPLE HELD-OUT RUNS"
+        "recording_session_disjoint_split": bool(recording_to_splits) and overlap_count == 0,
+        "session_level_inference": "RUN_DISJOINT_SPLIT_ONLY; INDEPENDENT_RUN INFERENCE REQUIRES MULTIPLE HELD-OUT RUNS",
+        "source_file_sha256": source_sha256,
     }
     return data_dict, audit
 
@@ -266,6 +273,18 @@ data_foggy, audit_foggy = extract_dataset_windows_flexible(
 print(f"I-294 Windows: Train={len(data_i294['train']['Y'])}, Val={len(data_i294['val']['Y'])}, Test={len(data_i294['test']['Y'])}")
 print(f"I-90 Windows : Train={len(data_i90['train']['Y'])}, Val={len(data_i90['val']['Y'])}, Test={len(data_i90['test']['Y'])}")
 print(f"Foggy Bottom : Train={len(data_foggy['train']['Y'])}, Val={len(data_foggy['val']['Y'])}, Test={len(data_foggy['test']['Y'])}")
+
+split_audit_df = pd.DataFrame([audit_i294, audit_i90, audit_foggy])
+split_audit_df.to_csv(MANIFEST_DIR / "highway_ablation_split_audit.csv", index=False)
+for dataset_name, dataset_data in [
+    ("TGSIM_I294_L2", data_i294),
+    ("TGSIM_I90_I94_MOVING", data_i90),
+    ("TGSIM_FOGGY_BOTTOM", data_foggy),
+]:
+    pd.DataFrame(dataset_data["split_manifest"]).to_csv(
+        MANIFEST_DIR / f"{dataset_name}_ablation_split_manifest.csv", index=False
+    )
+
 
 def compute_metrics(y_pred, y_true):
     err = np.linalg.norm(y_pred - y_true, axis=-1)
