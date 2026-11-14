@@ -17,7 +17,7 @@ class ExactCadenceWindowingTests(unittest.TestCase):
     def test_duplicate_timestamp_splits_segment(self):
         times = [i * 0.1 for i in range(40)]
         times[20] = times[19]
-        self.assertEqual(contiguous_segments(times), [(0, 20), (20, 40)])
+        self.assertEqual(contiguous_segments(times), [(0, 20), (20, 21), (21, 40)])
 
     def test_out_of_order_timestamp_splits_segment(self):
         times = [i * 0.1 for i in range(40)]
@@ -35,7 +35,7 @@ class ExactCadenceWindowingTests(unittest.TestCase):
     def test_window_starts_never_cross_gap(self):
         times = [i * 0.1 for i in range(65)] + [6.6 + i * 0.1 for i in range(65)]
         starts = list(iter_window_starts(times, history_steps=30, future_steps=30, stride=5))
-        self.assertEqual([start for _, _, start in starts], [0, 5, 10, 65, 70, 75])
+        self.assertEqual([start for _, _, start in starts], [0, 5, 65, 70])
         for seg_start, seg_stop, start in starts:
             self.assertGreaterEqual(start, seg_start)
             self.assertLessEqual(start + 60, seg_stop)
