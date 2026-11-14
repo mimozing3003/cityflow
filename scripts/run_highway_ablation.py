@@ -9,8 +9,10 @@ import numpy as np
 
 try:
     from trajectory_windowing import contiguous_segments, iter_window_starts
+    from group_splitting import split_group_keys
 except ImportError:
     from scripts.trajectory_windowing import contiguous_segments, iter_window_starts
+    from scripts.group_splitting import split_group_keys
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -47,7 +49,7 @@ print("=" * 85)
 # ==============================================================================
 # 1. EXTRACT DATA WITH MULTI-HORIZON & MULTI-HISTORY SUPPORT
 # ==============================================================================
-def extract_dataset_windows_flexible(csv_path, id_cols, time_col, x_col, y_col, stride=15, max_trajs=300):
+def extract_dataset_windows_flexible(csv_path, id_cols, time_col, x_col, stride=15, max_trajs=300, split_unit="trajectory"):
     df = pd.read_csv(csv_path)
     if isinstance(id_cols, list):
         groups = df.groupby(id_cols)
@@ -72,14 +74,18 @@ def extract_dataset_windows_flexible(csv_path, id_cols, time_col, x_col, y_col, 
     if len(viable_trajs) > max_trajs:
         viable_trajs = viable_trajs[:max_trajs]
 
-    # Vehicle-disjoint split: 70% train, 15% val, 15% test
+    id_names = id_cols if isinstance(id_cols, list) else [id_cols]
+    key_to_recording = {}
+    for key in viable_trajs:
+        key_values = tuple(key) if isinstance(key, tuple) else (key,)
+        key_map = {name: value for name, value in zip(id_names, key_values)}
+        key_to_recording[key] = str(key_map.get("run_index", key_map.get("recording_id", key_map.get("session_id", ""))))
+
+    split_keys, split_audit = split_group_keys(
+        viable_trajs, key_to_recording, split_unit=split_unit, seed=SEED
+    )
     n_total = len(viable_trajs)
-    n_train = int(0.70 * n_total)
-    n_val = int(0.15 * n_total)
-    
-    train_keys = set(viable_trajs[:n_train])
-    val_keys = set(viable_trajs[n_train:n_train + n_val])
-    test_keys = set(viable_trajs[n_train + n_val:])
+    train_keys, val_keys, test_keys = split_keys["train"], split_keys["val"], split_keys["test"]
 
     split_windows = {"train": [], "val": [], "test": []}
 
@@ -89,6 +95,9 @@ def extract_dataset_windows_flexible(csv_path, id_cols, time_col, x_col, y_col, 
         xs = v_df[x_col].values
         ys = v_df[y_col].values
         target_split = "train" if key in train_keys else ("val" if key in val_keys else "test")
+        key_values = tuple(key) if isinstance(key, tuple) else (key,)
+        key_map = {name: value for name, value in zip(id_names, key_values)}
+        recording_id = str(key_map.get("run_index", key_map.get("recording_id", key_map.get("session_id", ""))))
 
         # 50 steps history window buffer for testing 1s, 2s, 3s, 5s history
         for _, _, start in iter_window_starts(times, history_steps=50, future_steps=30, stride=stride):
@@ -150,7 +159,8 @@ def extract_dataset_windows_flexible(csv_path, id_cols, time_col, x_col, y_col, 
                 "curv": feats50[-1, 6],
                 "turn": feats50[-1, 5],
                 "jerk": feats50[-1, 7],
-                "traj_id": str(key)
+                "traj_id": str(key),
+                "recording_id": recording_id
             })
 
     data_dict = {}
@@ -167,6 +177,7 @@ def extract_dataset_windows_flexible(csv_path, id_cols, time_col, x_col, y_col, 
             turn = np.array([it["turn"] for it in items], dtype=np.float32)
             jerk = np.array([it["jerk"] for it in items], dtype=np.float32)
             tids = [it["traj_id"] for it in items]
+            recording_ids = [it["recording_id"] for it in items]
         else:
             X50 = np.zeros((0, 50, 8), dtype=np.float32)
             Y = np.zeros((0, 30, 2), dtype=np.float32)
@@ -178,6 +189,7 @@ def extract_dataset_windows_flexible(csv_path, id_cols, time_col, x_col, y_col, 
             turn = np.zeros(0, dtype=np.float32)
             jerk = np.zeros(0, dtype=np.float32)
             tids = []
+            recording_ids = []
 
         data_dict[s] = {
             "X50": X50,
@@ -190,30 +202,60 @@ def extract_dataset_windows_flexible(csv_path, id_cols, time_col, x_col, y_col, 
             "curvature": curv,
             "turn_rate": turn,
             "jerk": jerk,
-            "traj_id": tids
+            "traj_id": tids,
+            "recording_id": recording_ids
         }
 
+    split_manifest = []
+    recording_to_splits = {}
+    for split_name, keys in split_keys.items():
+        for key in viable_trajs:
+            if key not in keys:
+                continue
+            key_values = tuple(key) if isinstance(key, tuple) else (key,)
+            key_map = {name: value for name, value in zip(id_names, key_values)}
+            recording_id = str(key_map.get("run_index", key_map.get("recording_id", key_map.get("session_id", ""))))
+            split_manifest.append({
+                "dataset": csv_path.name,
+                "split": split_name,
+                "trajectory_id": str(key),
+                "recording_id": recording_id,
+            })
+            if recording_id:
+                recording_to_splits.setdefault(recording_id, set()).add(split_name)
+
+    overlap_count = sum(len(splits) > 1 for splits in recording_to_splits.values())
+    data_dict["split_manifest"] = split_manifest
     audit = {
         "dataset": csv_path.name,
+        "split_unit": split_unit,
         "total_trajectories": n_total,
         "train_trajectories": len(train_keys),
         "val_trajectories": len(val_keys),
         "test_trajectories": len(test_keys),
         "train_windows": len(data_dict["train"]["Y"]),
         "val_windows": len(data_dict["val"]["Y"]),
-        "test_windows": len(data_dict["test"]["Y"])
+        "test_windows": len(data_dict["test"]["Y"]),
+        "recording_id_available": bool(recording_to_splits),
+        "distinct_recording_ids": len(recording_to_splits),
+        "recording_split_overlap_count": overlap_count,
+        "recording_split_disjoint": split_audit["recording_disjoint"],
+        "train_recording_ids": split_audit.get("train_recording_ids", []),
+        "val_recording_ids": split_audit.get("val_recording_ids", []),
+        "test_recording_ids": split_audit.get("test_recording_ids", []),
+        "session_level_inference": "RUN_DISJOINT_SPLIT_ONLY; INDEPENDENT_RUN INFERENCE REQUIRES MULTIPLE HELD-OUT RUNS"
     }
     return data_dict, audit
 
 print("Extracting multi-horizon highway windows...")
 data_i294, audit_i294 = extract_dataset_windows_flexible(
     Path("data/raw/TGSIM_I294_L2/I294_L2_final.csv"),
-    ["id", "run_index"], "time", "xloc_kf", "yloc_kf", stride=12, max_trajs=300
+    ["id", "run_index"], "time", "xloc_kf", "yloc_kf", stride=12, max_trajs=300, split_unit="recording"
 )
 
 data_i90, audit_i90 = extract_dataset_windows_flexible(
     Path("data/raw/TGSIM_I90_I94_MOVING/I90_94_moving_final.csv"),
-    ["ID", "run_index"], "time", "xloc_kf", "yloc_kf", stride=25, max_trajs=300 # stride 25 gives ~4k windows, optimal for ablation
+    ["ID", "run_index"], "time", "xloc_kf", "yloc_kf", stride=25, max_trajs=300, split_unit="recording" # stride 25 gives ~4k windows, optimal for ablation
 )
 
 data_foggy, audit_foggy = extract_dataset_windows_flexible(
