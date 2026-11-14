@@ -109,3 +109,49 @@ def split_group_keys(
         "test_recording_ids": sorted(test_recordings),
         "recording_disjoint_reason": "All trajectories from each source recording/run are assigned to one partition.",
     }
+
+
+
+def select_group_keys(
+    group_keys: Sequence[Hashable],
+    group_to_recording: dict[Hashable, str],
+    max_groups: int | None = None,
+    split_unit: str = "trajectory",
+    seed: int = 42,
+) -> list[Hashable]:
+    """Cap sampled trajectories while retaining at least one per recording.
+
+    When recording-disjoint evaluation is requested, a global random cap can
+    erase an entire run. This selector first reserves one random trajectory
+    from every recording, then fills the remaining capacity randomly.
+    """
+    keys = list(group_keys)
+    if max_groups is None or max_groups <= 0 or len(keys) <= max_groups:
+        return keys
+    rng = random.Random(seed)
+    if split_unit != "recording":
+        rng.shuffle(keys)
+        return keys[:max_groups]
+
+    groups = {}
+    for key in keys:
+        recording = str(group_to_recording.get(key, "")).strip()
+        if not recording:
+            raise ValueError("Cannot stratify a recording split: a trajectory has no recording/run ID.")
+        groups.setdefault(recording, []).append(key)
+    if max_groups < len(groups):
+        raise ValueError(
+            f"max_groups={max_groups} is smaller than the {len(groups)} available recording IDs."
+        )
+
+    selected = []
+    remaining = []
+    for recording in sorted(groups):
+        candidates = list(groups[recording])
+        rng.shuffle(candidates)
+        selected.append(candidates[0])
+        remaining.extend(candidates[1:])
+    rng.shuffle(remaining)
+    selected.extend(remaining[:max_groups - len(selected)])
+    rng.shuffle(selected)
+    return selected
