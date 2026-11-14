@@ -7,6 +7,8 @@ on:
       - "carla_demo/05_feature_engine.py"
       - "scripts/audit_demo_trajectory_lineage.py"
       - "scripts/audit_tgsim_source_data.py"
+      - "scripts/cluster_statistics.py"
+      - "scripts/run_highway_ablation.py"
       - "scripts/trajectory_windowing.py"
       - "scripts/run_highway_benchmark.py"
       - "scripts/run_highway_ablation.py"
@@ -24,6 +26,7 @@ on:
       - "audit/demo-trajectory-lineage"
       - "data/tgsim-source-auditor"
       - "fix/exact-cadence-windowing"
+      - "fix/clustered-bootstrap"
 
 jobs:
   feature-contract:
@@ -36,7 +39,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install test dependency
-        run: python -m pip install --disable-pip-version-check numpy
+        run: python -m pip install --disable-pip-version-check numpy scipy
       - name: Compile changed training and evaluation scripts
         run: |
           python -m py_compile scripts/trajectory_windowing.py scripts/run_highway_benchmark.py scripts/run_highway_ablation.py scripts/train_tgsim_physical_model.py scripts/run_tgsim_cross_dataset.py
