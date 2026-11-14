@@ -37,3 +37,6 @@ This project is made available under the MIT License. See [LICENSE](LICENSE) for
 The current final-paper evidence gate is documented in [PAPER_READINESS_AUDIT.md](PAPER_READINESS_AUDIT.md). The machine-readable release metadata template is [paper_artifact_manifest.template.json](paper_artifact_manifest.template.json).
 
 The research report contains historical benchmark claims that must be regenerated from versioned data, model, prediction, and evaluation artifacts before final submission. A polished manuscript is not considered paper-ready until all evidence gates pass.
+
+
+Dataset provenance and non-equivalence notes for I-24 MOTION and the individual TGSIM products are in [DATASET_PROVENANCE_NOTES.md](DATASET_PROVENANCE_NOTES.md). Exact local source-file hashes and extraction counts are still required.
