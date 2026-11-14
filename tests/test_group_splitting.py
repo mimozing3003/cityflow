@@ -1,6 +1,6 @@
 import unittest
 
-from scripts.group_splitting import split_group_keys
+from scripts.group_splitting import split_group_keys, select_group_keys
 
 
 class RecordingDisjointSplitTests(unittest.TestCase):
@@ -26,6 +26,18 @@ class RecordingDisjointSplitTests(unittest.TestCase):
         a, _ = split_group_keys(self.keys, self.to_recording, "recording", seed=21)
         b, _ = split_group_keys(self.keys, self.to_recording, "recording", seed=21)
         self.assertEqual(a, b)
+
+    def test_recording_stratified_cap_keeps_every_run(self):
+        selected = select_group_keys(
+            self.keys, self.to_recording, max_groups=3,
+            split_unit="recording", seed=4
+        )
+        self.assertEqual(len(selected), 3)
+        self.assertEqual({self.to_recording[key] for key in selected}, {"run_1", "run_2", "run_3", "run_4"} - {"run_4"})
+
+    def test_recording_cap_rejects_less_slots_than_runs(self):
+        with self.assertRaises(ValueError):
+            select_group_keys(self.keys, self.to_recording, max_groups=2, split_unit="recording")
 
     def test_recording_split_requires_run_ids(self):
         mapping = dict(self.to_recording)
