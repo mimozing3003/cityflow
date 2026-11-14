@@ -56,3 +56,8 @@ python scripts/audit_tgsim_source_data.py --dataset TGSIM_FOGGY_BOTTOM --csv "da
 ```
 
 It accepts only explicit published hyphenated or documented normalized underscore aliases, rejects ambiguous headers, hashes the exact input file, and blocks recording/session-level lineage when no recording/run identifier is present. It does not prove feature parity or transform image/reference coordinates.
+
+
+### Exact-cadence trajectory windows
+
+The TGSIM training/benchmark extractors now split each track at duplicate, out-of-order, non-finite, or non-10-Hz timestamp intervals (nominal 0.1 s, tolerance ±0.025 s). Windows are generated only within continuous segments; a history/target pair cannot cross a time gap. This deliberately rejects the prior permissive rule that allowed gaps up to 0.25 s while still differentiating at 0.1 s.

@@ -6,6 +6,11 @@ import random
 from pathlib import Path
 
 import numpy as np
+
+try:
+    from trajectory_windowing import contiguous_segments, iter_window_starts
+except ImportError:
+    from scripts.trajectory_windowing import contiguous_segments, iter_window_starts
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -60,8 +65,8 @@ def extract_dataset_windows(csv_path, id_cols, time_col, x_col, y_col, stride=15
             continue
         v_df_sorted = v_df.sort_values(time_col).reset_index(drop=True)
         times = v_df_sorted[time_col].values
-        dts = np.diff(times)
-        if len(dts) == 0 or np.max(dts) > 0.25:
+        segments = contiguous_segments(times, nominal_dt=0.1, tolerance=0.025)
+        if not any(stop - start >= 60 for start, stop in segments):
             continue
         viable_trajs.append(key)
         group_dict[key] = v_df_sorted
@@ -90,7 +95,7 @@ def extract_dataset_windows(csv_path, id_cols, time_col, x_col, y_col, stride=15
         ys = v_df[y_col].values
         target_split = "train" if key in train_keys else ("val" if key in val_keys else "test")
 
-        for start in range(0, len(v_df) - 60 + 1, stride):
+        for _, _, start in iter_window_starts(times, history_steps=30, future_steps=30, stride=stride):
             hist_x = xs[start : start + 30]
             hist_y = ys[start : start + 30]
             fut_x = xs[start + 30 : start + 60]
@@ -124,7 +129,7 @@ def extract_dataset_windows(csv_path, id_cols, time_col, x_col, y_col, stride=15
                     feats[t, 4] = (spd_t - feats[t-5, 2]) / 0.5
                 if spd_t > 0.1:
                     psi_t = np.arctan2(vy_t, vx_t)
-                    psi_prev = np.arctan2(feats[t-1, 1], max(feats[t-1, 0], 1e-4))
+                    psi_prev = np.arctan2(feats[t-1, 1], feats[t-1, 0])
                     dpsi = (psi_t - psi_prev + np.pi) % (2 * np.pi) - np.pi
                     feats[t, 5] = dpsi / 0.1
                     feats[t, 6] = feats[t, 5] / max(spd_t, 1.0)
