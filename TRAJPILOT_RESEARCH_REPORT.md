@@ -181,6 +181,8 @@ The benchmark evaluated 9 model architectures across 600 target highway trajecto
 
 ### 6.1 Master Highway Leaderboard Summary
 
+> **Statistical validity warning (added 14 November 2026):** the previously checked-in ablation script resampled individual overlapping windows and performed paired tests at window level, despite describing the bootstrap as trajectory-level. These windows are correlated within each vehicle track. The confidence intervals and p-values shown in this historical table are therefore **provisional and must be regenerated** using the corrected trajectory-cluster procedure in `scripts/cluster_statistics.py`. The corrected implementation has not yet been run against the actual local TGSIM files. It is trajectory-cluster inference only; session-level inference remains unestablished.
+
 | Rank | Model Architecture | Category | Mean Highway FDE | Bootstrap 95% CI | Latency | Parameters | Failure Rate |
 |:---:|:---|:---|:---:|:---:|:---:|:---:|:---:|
 | **1** | **Kinematically Constrained XGBoost** | Constrained ML | **1.5367 m** | [1.462, 1.614] m | 0.0062 ms | 1,200 | **12.4%** |
