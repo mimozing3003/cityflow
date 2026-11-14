@@ -5,6 +5,7 @@ Spawns ego vehicle, surrounding traffic, attaches synchronized RGB camera, and m
 
 import random
 import queue
+import time
 import numpy as np
 
 try:
@@ -28,6 +29,7 @@ class CarlaScene:
         self.npc_vehicles = []
         self.camera_sensor = None
         self.image_queue = queue.Queue(maxsize=10)
+        self._pending_image = None
         self.all_actor_ids = []
 
     def spawn(self):
@@ -104,6 +106,44 @@ class CarlaScene:
         print(f"Surrounding NPCs  : {spawned_count}/{self.num_npcs} vehicles spawned successfully")
         print("=" * 78)
         return self.ego_vehicle, self.camera_sensor
+
+    def get_image_for_frame(self, expected_frame, timeout=1.0):
+        """
+        Return only the camera image synchronized to expected_frame.
+
+        Stale frames are discarded. A future frame is retained for the next
+        tick rather than being paired with the wrong ego state.
+        """
+        expected_frame = int(expected_frame)
+        deadline = time.monotonic() + max(0.0, float(timeout))
+
+        if self._pending_image is not None:
+            pending_frame, pending_rgb = self._pending_image
+            if pending_frame == expected_frame:
+                self._pending_image = None
+                return pending_frame, pending_rgb
+            if pending_frame < expected_frame:
+                self._pending_image = None
+            else:
+                return None, None
+
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0.0:
+                return None, None
+            try:
+                frame_id, rgb_image = self.image_queue.get(timeout=remaining)
+            except queue.Empty:
+                return None, None
+
+            frame_id = int(frame_id)
+            if frame_id < expected_frame:
+                continue
+            if frame_id == expected_frame:
+                return frame_id, rgb_image
+
+            self._pending_image = (frame_id, rgb_image)
+            return None, None
 
     def get_latest_image(self, timeout=2.0):
         try:

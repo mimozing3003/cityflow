@@ -104,6 +104,16 @@ class FeatureValidityGateTests(unittest.TestCase):
         self.assertAlmostEqual(float(features[9]), 2.0, places=5)
         self.assertAlmostEqual(float(features[11]), 1.55, places=5)
 
+
+    def test_history_warmup_requires_30_observed_frames(self):
+        engine = CarlaFeatureEngine(fps=10.0, history_len=30)
+        ego = Actor(1, 0, 0, vx=10)
+        for _ in range(29):
+            engine.update(ego, [ego])
+        self.assertFalse(engine.is_history_ready())
+        engine.update(ego, [ego])
+        self.assertTrue(engine.is_history_ready())
+
     def test_moving_ego_no_leader_metadata_contract(self):
         engine = CarlaFeatureEngine(fps=10.0, history_len=30)
         ego = Actor(1, 0, 0, vx=5)
