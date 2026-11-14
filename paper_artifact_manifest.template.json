@@ -6,10 +6,13 @@
   "datasets": [
     {
       "name": "I-24 MOTION",
-      "version": "REQUIRED",
+      "product_id": "REQUIRED_EXACT_PRODUCT",
+      "version": "REQUIRED_EXACT_RELEASE_EG_V1.1.1",
       "provider_citation": "REQUIRED",
-      "license_or_eula": "REQUIRED",
+      "license_or_eula": "I-24 MOTION DATA USE AGREEMENT",
       "retrieval_instructions": "REQUIRED",
+      "documentation_version": "REQUIRED",
+      "retrieved_at_utc": "REQUIRED",
       "files": [
         {
           "path": "REQUIRED_RELATIVE_PATH",
@@ -26,11 +29,13 @@
       "data_dictionary_path": "REQUIRED"
     },
     {
-      "name": "TGSIM",
+      "name": "TGSIM I-294",
+      "product_id": "I-294 L2 OR L1 — SPECIFY",
       "version": "REQUIRED",
-      "provider_citation": "REQUIRED",
-      "license_or_eula": "REQUIRED",
+      "provider_citation": "FHWA/ITS JPO RECOMMENDED CITATION",
+      "license_or_eula": "PUBLIC DATA.GOV PRODUCT TERMS",
       "retrieval_instructions": "REQUIRED",
+      "retrieved_at_utc": "REQUIRED",
       "files": [
         {
           "path": "REQUIRED_RELATIVE_PATH",
@@ -38,12 +43,59 @@
           "bytes": 0
         }
       ],
-      "coordinate_reference": "REQUIRED",
-      "spatial_units": "REQUIRED",
+      "coordinate_reference": "RUN-SPECIFIC REFERENCE IMAGE",
+      "spatial_units": "METRES AFTER 0.3 M/PIXEL TRANSFORM",
       "timestamp_unit": "REQUIRED",
       "sampling_hz": 10,
       "recording_id_column": "REQUIRED",
       "vehicle_id_column": "REQUIRED",
+      "data_dictionary_path": "REQUIRED"
+    },
+    {
+      "name": "TGSIM I-90/I-94",
+      "product_id": "MOVING OR STATIONARY — SPECIFY",
+      "version": "REQUIRED",
+      "provider_citation": "FHWA/ITS JPO RECOMMENDED CITATION",
+      "license_or_eula": "PUBLIC DATA.GOV PRODUCT TERMS",
+      "retrieval_instructions": "REQUIRED",
+      "retrieved_at_utc": "REQUIRED",
+      "files": [
+        {
+          "path": "REQUIRED_RELATIVE_PATH",
+          "sha256": "REQUIRED_SHA256",
+          "bytes": 0
+        }
+      ],
+      "coordinate_reference": "RUN-SPECIFIC REFERENCE IMAGE",
+      "spatial_units": "METRES AFTER 0.3 M/PIXEL TRANSFORM",
+      "timestamp_unit": "REQUIRED",
+      "sampling_hz": 10,
+      "recording_id_column": "REQUIRED",
+      "vehicle_id_column": "REQUIRED",
+      "data_dictionary_path": "REQUIRED"
+    },
+    {
+      "name": "TGSIM Foggy Bottom",
+      "product_id": "FOGGY BOTTOM TRAJECTORIES",
+      "version": "REQUIRED",
+      "provider_citation": "FHWA/ITS JPO RECOMMENDED CITATION",
+      "license_or_eula": "PUBLIC DATA.GOV PRODUCT TERMS",
+      "retrieval_instructions": "REQUIRED",
+      "retrieved_at_utc": "REQUIRED",
+      "files": [
+        {
+          "path": "REQUIRED_RELATIVE_PATH",
+          "sha256": "REQUIRED_SHA256",
+          "bytes": 0
+        }
+      ],
+      "coordinate_reference": "REFERENCE IMAGE; TOP-LEFT ORIGIN AND OFFICIAL SEGMENT POLYGONS",
+      "spatial_units": "METRES AFTER 0.0186613838586 M/PIXEL TRANSFORM",
+      "timestamp_unit": "REQUIRED",
+      "sampling_hz": 10,
+      "recording_id_column": "REQUIRED",
+      "vehicle_id_column": "REQUIRED",
+      "road_user_type_column": "REQUIRED",
       "data_dictionary_path": "REQUIRED"
     }
   ],
