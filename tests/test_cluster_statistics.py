@@ -31,12 +31,12 @@ class ClusterStatisticsTests(unittest.TestCase):
 
     def test_unequal_model_cluster_ids_rejected(self):
         with self.assertRaises(ValueError):
-            paired_cluster_test([1, 2, 3], [0, 1, 2], ["a", "a", "b"])
+            paired_cluster_test([1, 2, 3], [0, 1], ["a", "a", "b"])
 
     def test_holm_adjustment_is_monotone_and_restores_order(self):
         raw = [0.04, 0.001, 0.02, 0.5]
         adjusted = holm_adjust(raw)
-        self.assertAlmostEqual(adjusted[0], 0.06)
+        self.assertAlmostEqual(adjusted[0], 0.08)
         self.assertAlmostEqual(adjusted[1], 0.004)
         self.assertAlmostEqual(adjusted[2], 0.06)
         self.assertAlmostEqual(adjusted[3], 0.5)
