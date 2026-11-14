@@ -61,3 +61,6 @@ It accepts only explicit published hyphenated or documented normalized underscor
 ### Exact-cadence trajectory windows
 
 The TGSIM training/benchmark extractors now split each track at duplicate, out-of-order, non-finite, or non-10-Hz timestamp intervals (nominal 0.1 s, tolerance ±0.025 s). Windows are generated only within continuous segments; a history/target pair cannot cross a time gap. This deliberately rejects the prior permissive rule that allowed gaps up to 0.25 s while still differentiating at 0.1 s.
+
+
+The statistical uncertainty protocol and the limitation of trajectory- versus session-level inference are documented in [CLUSTERED_STATISTICAL_PROTOCOL.md](CLUSTERED_STATISTICAL_PROTOCOL.md). Historical bootstrap confidence intervals in the research report are provisional until regenerated from the corrected script on the exact source datasets.
