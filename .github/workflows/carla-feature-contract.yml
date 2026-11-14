@@ -5,6 +5,8 @@ on:
     paths:
       - "carla_demo/04_spawn_scene.py"
       - "carla_demo/05_feature_engine.py"
+      - "scripts/audit_demo_trajectory_lineage.py"
+      - "curla demostrate/*.csv"
       - "carla_demo/07_visualization.py"
       - "carla_demo/08_run_demo.py"
       - "tests/**"
@@ -13,6 +15,7 @@ on:
     branches:
       - "audit/carla-feature-validity-gate"
       - "fix/carla-inference-history-warmup"
+      - "audit/demo-trajectory-lineage"
 
 jobs:
   feature-contract:
@@ -26,5 +29,7 @@ jobs:
           python-version: "3.12"
       - name: Install test dependency
         run: python -m pip install --disable-pip-version-check numpy
-      - name: Run CARLA feature contract tests
+      - name: Run repository demo-data audit
+        run: python scripts/audit_demo_trajectory_lineage.py
+      - name: Run project contract and lineage tests
         run: python -m unittest discover -s tests -v
