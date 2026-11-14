@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import hashlib
 import time
 import random
 from pathlib import Path
@@ -9,8 +10,12 @@ import numpy as np
 
 try:
     from trajectory_windowing import contiguous_segments, iter_window_starts
+    from cluster_statistics import cluster_bootstrap_ci, paired_cluster_test, holm_adjust
+    from benchmark_artifacts import build_prediction_rows, build_window_metadata_rows
 except ImportError:
     from scripts.trajectory_windowing import contiguous_segments, iter_window_starts
+    from scripts.cluster_statistics import cluster_bootstrap_ci, paired_cluster_test, holm_adjust
+    from scripts.benchmark_artifacts import build_prediction_rows, build_window_metadata_rows
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -50,12 +55,20 @@ print("=" * 80)
 # ==============================================================================
 # 1. DATA EXTRACTION WITH VEHICLE-DISJOINT SPLITTING
 # ==============================================================================
+def sha256_file(path):
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def extract_dataset_windows(csv_path, id_cols, time_col, x_col, y_col, stride=15, max_trajs=300):
+    csv_path = Path(csv_path)
+    source_sha256 = sha256_file(csv_path)
     df = pd.read_csv(csv_path)
-    if isinstance(id_cols, list):
-        groups = df.groupby(id_cols)
-    else:
-        groups = df.groupby([id_cols])
+    id_names = id_cols if isinstance(id_cols, list) else [id_cols]
+    groups = df.groupby(id_names)
 
     # 1. Identify viable trajectories first (continuity & minimum length)
     viable_trajs = []
@@ -86,7 +99,36 @@ def extract_dataset_windows(csv_path, id_cols, time_col, x_col, y_col, stride=15
     val_keys = set(viable_trajs[n_train:n_train + n_val])
     test_keys = set(viable_trajs[n_train + n_val:])
 
-    split_windows = {"train": ([], [], []), "val": ([], [], []), "test": ([], [], [])}
+    split_keys = {"train": train_keys, "val": val_keys, "test": test_keys}
+    split_manifest = []
+    recording_to_splits = {}
+    for split_name, keys in split_keys.items():
+        for key in keys:
+            key_values = tuple(key) if isinstance(key, tuple) else (key,)
+            key_map = {name: value for name, value in zip(id_names, key_values)}
+            recording_id = str(key_map.get("run_index", key_map.get("recording_id", key_map.get("session_id", ""))))
+            vehicle_id = str(key_map.get("id", key_map.get("ID", key_map.get("vehicle_id", key_map.get("track_id", "")))))
+            trajectory_id = json.dumps(
+                [[name, str(key_map[name])] for name in id_names],
+                separators=(",", ":"),
+            )
+            split_manifest.append({
+                "dataset": csv_path.stem,
+                "split": split_name,
+                "trajectory_id": trajectory_id,
+                "recording_id": recording_id,
+                "vehicle_id": vehicle_id,
+                "source_file": csv_path.name,
+                "source_file_sha256": source_sha256,
+            })
+            if recording_id:
+                recording_to_splits.setdefault(recording_id, set()).add(split_name)
+
+    recording_split_overlap_count = sum(
+        len(split_names) > 1 for split_names in recording_to_splits.values()
+    )
+
+    split_windows = {"train": ([], [], [], []), "val": ([], [], [], []), "test": ([], [], [], [])}
 
     for key in viable_trajs:
         v_df = group_dict[key]
@@ -94,8 +136,16 @@ def extract_dataset_windows(csv_path, id_cols, time_col, x_col, y_col, stride=15
         xs = v_df[x_col].values
         ys = v_df[y_col].values
         target_split = "train" if key in train_keys else ("val" if key in val_keys else "test")
+        key_values = tuple(key) if isinstance(key, tuple) else (key,)
+        key_map = {name: value for name, value in zip(id_names, key_values)}
+        recording_id = str(key_map.get("run_index", key_map.get("recording_id", key_map.get("session_id", ""))))
+        vehicle_id = str(key_map.get("id", key_map.get("ID", key_map.get("vehicle_id", key_map.get("track_id", "")))))
+        trajectory_id = json.dumps(
+            [[name, str(key_map[name])] for name in id_names],
+            separators=(",", ":"),
+        )
 
-        for _, _, start in iter_window_starts(times, history_steps=30, future_steps=30, stride=stride):
+        for segment_start, segment_stop, start in iter_window_starts(times, history_steps=30, future_steps=30, stride=stride):
             hist_x = xs[start : start + 30]
             hist_y = ys[start : start + 30]
             fut_x = xs[start + 30 : start + 60]
@@ -147,6 +197,24 @@ def extract_dataset_windows(csv_path, id_cols, time_col, x_col, y_col, stride=15
             split_windows[target_split][0].append(feats)
             split_windows[target_split][1].append(y_ego)
             split_windows[target_split][2].append((cv_pred, ca_pred, v_mag))
+            future_timestamps = [float(value) for value in times[start + 30 : start + 60]]
+            window_id = hashlib.sha256(
+                f"{csv_path.name}|{source_sha256}|{trajectory_id}|{start}".encode("utf-8")
+            ).hexdigest()
+            split_windows[target_split][3].append({
+                "window_id": window_id,
+                "trajectory_id": trajectory_id,
+                "recording_id": recording_id,
+                "vehicle_id": vehicle_id,
+                "source_file": csv_path.name,
+                "source_file_sha256": source_sha256,
+                "window_start_index": int(start),
+                "segment_start_index": int(segment_start),
+                "segment_stop_index": int(segment_stop),
+                "history_start_time_s": float(times[start]),
+                "prediction_origin_time_s": float(times[start + 29]),
+                "future_timestamps_s": future_timestamps,
+            })
 
     data_dict = {}
     for s in ["train", "val", "test"]:
@@ -156,14 +224,21 @@ def extract_dataset_windows(csv_path, id_cols, time_col, x_col, y_col, stride=15
             cv_arr = np.array([item[0] for item in split_windows[s][2]], dtype=np.float32)
             ca_arr = np.array([item[1] for item in split_windows[s][2]], dtype=np.float32)
             spd_arr = np.array([item[2] for item in split_windows[s][2]], dtype=np.float32)
+            metadata_arr = split_windows[s][3]
         else:
             X_arr = np.zeros((0, 30, 8), dtype=np.float32)
             Y_arr = np.zeros((0, 30, 2), dtype=np.float32)
             cv_arr = np.zeros((0, 30, 2), dtype=np.float32)
             ca_arr = np.zeros((0, 30, 2), dtype=np.float32)
             spd_arr = np.zeros((0,), dtype=np.float32)
+            metadata_arr = []
 
-        data_dict[s] = {"X": X_arr, "Y": Y_arr, "CV": cv_arr, "CA": ca_arr, "speed": spd_arr}
+        data_dict[s] = {
+            "X": X_arr, "Y": Y_arr, "CV": cv_arr, "CA": ca_arr,
+            "speed": spd_arr, "metadata": metadata_arr,
+            "trajectory_ids": np.asarray([row["trajectory_id"] for row in metadata_arr], dtype=str),
+            "recording_ids": np.asarray([row["recording_id"] for row in metadata_arr], dtype=str),
+        }
 
     audit_row = {
         "dataset": csv_path.name,
@@ -174,7 +249,14 @@ def extract_dataset_windows(csv_path, id_cols, time_col, x_col, y_col, stride=15
         "train_windows": len(data_dict["train"]["X"]),
         "val_windows": len(data_dict["val"]["X"]),
         "test_windows": len(data_dict["test"]["X"]),
+        "recording_id_available": bool(recording_to_splits),
+        "distinct_recording_ids": len(recording_to_splits),
+        "recording_split_overlap_count": recording_split_overlap_count,
+        "recording_session_disjoint_split": bool(recording_to_splits) and recording_split_overlap_count == 0,
+        "session_level_inference": "NOT_ESTABLISHED_UNLESS_RECORDING_SPLIT_DISJOINT_AND_RUN_SEMANTICS_VERIFIED",
+        "source_file_sha256": source_sha256,
     }
+    data_dict["split_manifest"] = split_manifest
     return data_dict, audit_row
 
 print("Extracting TGSIM Highway Datasets with Vehicle-Disjoint Splitting...")
@@ -683,6 +765,28 @@ for dname, ddata in datasets_to_run:
 
     all_predictions[dname] = dataset_preds
 
+# Add trajectory-cluster bootstrap intervals to every model result.
+dataset_lookup = dict(datasets_to_run)
+for result_row in all_benchmark_results:
+    dname = result_row["Dataset"]
+    metadata_rows = dataset_lookup[dname]["test"]["metadata"]
+    trajectory_ids = np.asarray([row["trajectory_id"] for row in metadata_rows], dtype=str)
+    errors = result_row["per_sample_err"]
+    if len(trajectory_ids) != len(errors):
+        raise RuntimeError(f"Test-window identity mismatch for {dname}/{result_row['Model']}.")
+    ade_ci = cluster_bootstrap_ci(errors.mean(axis=1), trajectory_ids, n_boot=1000, confidence=0.95, seed=SEED)
+    fde_ci = cluster_bootstrap_ci(errors[:, -1], trajectory_ids, n_boot=1000, confidence=0.95, seed=SEED)
+    result_row.update({
+        "ADE_95_CI_Lower": ade_ci["ci_lower"],
+        "ADE_95_CI_Upper": ade_ci["ci_upper"],
+        "FDE_95_CI_Lower": fde_ci["ci_lower"],
+        "FDE_95_CI_Upper": fde_ci["ci_upper"],
+        "Test_Windows": ade_ci["n_observations"],
+        "Trajectory_Clusters": ade_ci["n_clusters"],
+        "Bootstrap_Unit": "trajectory_id",
+        "Session_Level_Inference": "NOT_ESTABLISHED",
+    })
+
 # Save Scalers Record
 with open(MODELS_DIR / "scalers.json", "w", encoding="utf-8") as f:
     json.dump(scalers_record, f, indent=2)
@@ -692,6 +796,29 @@ np.savez_compressed(
     RESULTS_DIR / "highway_predictions.npz",
     **{f"{d}_{m}": pred for d, preds in all_predictions.items() for m, pred in preds.items()}
 )
+
+# Save trajectory split manifests, window metadata for every partition, and test predictions.
+all_prediction_rows = []
+for dname, ddata in datasets_to_run:
+    split_manifest_df = pd.DataFrame(ddata["split_manifest"])
+    split_manifest_df.to_csv(MANIFEST_DIR / f"{dname}_trajectory_split_manifest.csv", index=False)
+
+    for split_name in ["train", "val", "test"]:
+        window_metadata = ddata[split_name]["metadata"]
+        metadata_frame = pd.DataFrame(build_window_metadata_rows(dname, split_name, window_metadata))
+        metadata_frame.to_csv(RESULTS_DIR / f"{dname}_{split_name}_window_metadata.csv", index=False)
+        metadata_frame.to_csv(TABLES_DIR / f"{dname}_{split_name}_window_metadata.csv", index=False)
+
+    test_metadata = ddata["test"]["metadata"]
+    for model_name, prediction in all_predictions[dname].items():
+        model_metadata = [{**row, "model_name": model_name} for row in test_metadata]
+        all_prediction_rows.extend(
+            build_prediction_rows(dname, prediction, ddata["test"]["Y"], model_metadata)
+        )
+
+prediction_long_df = pd.DataFrame(all_prediction_rows)
+prediction_long_df.to_csv(RESULTS_DIR / "highway_predictions_long.csv", index=False)
+prediction_long_df.to_csv(TABLES_DIR / "highway_predictions_long.csv", index=False)
 
 # Save Training Histories
 hist_serializable = {k: {"train_loss": [float(x) for x in tr], "val_loss": [float(x) for x in val]} for k, (tr, val) in all_training_histories.items()}
@@ -726,6 +853,14 @@ for dname in ["TGSIM_I294_L2", "TGSIM_I90_I94_MOVING"]:
             "MAE": round(r["MAE"], 4),
             "Parameters": r["Parameters"],
             "Inference_ms": round(r["Inf_Latency_ms"], 3),
+            "ADE_95_CI_Lower": round(r["ADE_95_CI_Lower"], 4),
+            "ADE_95_CI_Upper": round(r["ADE_95_CI_Upper"], 4),
+            "FDE_95_CI_Lower": round(r["FDE_95_CI_Lower"], 4),
+            "FDE_95_CI_Upper": round(r["FDE_95_CI_Upper"], 4),
+            "Test_Windows": int(r["Test_Windows"]),
+            "Trajectory_Clusters": int(r["Trajectory_Clusters"]),
+            "Bootstrap_Unit": r["Bootstrap_Unit"],
+            "Session_Level_Inference": r["Session_Level_Inference"],
             "Train_Time_s": round(r["Train_Time_s"], 2),
             "Improvement_vs_CV": f"{fde_vs_cv:+.2f}%",
             "Improvement_vs_CA": f"{((ca_fde - r['FDE']) / ca_fde)*100:+.2f}%",
@@ -779,41 +914,43 @@ print(cross_df[["Overall_Rank", "Model", "Mean_Raw_ADE", "Mean_Raw_FDE", "Normal
 print("=" * 115)
 
 # ==============================================================================
-# 6. STATISTICAL SIGNIFICANCE ANALYSIS (PAIRED TESTS VS CV)
+# 6. STATISTICAL SIGNIFICANCE ANALYSIS (PAIRED TRAJECTORY-CLUSTER TESTS VS CV)
 # ==============================================================================
 stat_records = []
-for dname in ["TGSIM_I294_L2", "TGSIM_I90_I94_MOVING"]:
+for dname, ddata in datasets_to_run:
     cv_err = results_df[(results_df["Dataset"] == dname) & (results_df["Model"] == "Constant Velocity (CV)")].iloc[0]["per_sample_err"][:, -1]
     sub = results_df[results_df["Dataset"] == dname]
+    trajectory_ids = ddata["test"]["trajectory_ids"]
+    if len(trajectory_ids) != len(cv_err):
+        raise RuntimeError(f"Trajectory IDs do not align with CV test errors for {dname}.")
 
     for _, r in sub.iterrows():
         if r["Model"] == "Constant Velocity (CV)":
             continue
         m_err = r["per_sample_err"][:, -1]
-        diff = cv_err - m_err # Positive = Model is better than CV
-
-        # Paired t-test
-        t_stat, p_val = stats.ttest_rel(cv_err, m_err)
-        # Wilcoxon signed-rank test
-        try:
-            w_stat, w_pval = stats.wilcoxon(cv_err, m_err)
-        except Exception:
-            w_stat, w_pval = 0.0, 1.0
-
-        mean_diff = float(np.mean(diff))
-        med_diff = float(np.median(diff))
+        paired = paired_cluster_test(cv_err, m_err, trajectory_ids)
+        mean_diff = paired["mean_difference_base_minus_model"]
         pct_imp = (mean_diff / np.mean(cv_err)) * 100
 
         stat_records.append({
             "Dataset": dname,
             "Model": r["Model"],
+            "Trajectory_Clusters": paired["n_clusters"],
+            "Test_Unit": "per-trajectory mean",
+            "Session_Level_Inference": "NOT_ESTABLISHED",
             "Mean_FDE_Diff_m": round(mean_diff, 4),
-            "Median_FDE_Diff_m": round(med_diff, 4),
+            "Median_FDE_Diff_m": round(paired["median_difference_base_minus_model"], 4),
             "Pct_Improvement": f"{pct_imp:+.2f}%",
-            "Paired_t_pvalue": f"{p_val:.2e}",
-            "Wilcoxon_pvalue": f"{w_pval:.2e}",
-            "Statistically_Significant": "YES (p < 0.001)" if p_val < 0.001 else "NO"
+            "Paired_t_pvalue_raw": paired["paired_t_pvalue"],
+            "Wilcoxon_pvalue_raw": paired["wilcoxon_pvalue"],
+            "Holm_Adjusted_Wilcoxon_pvalue": None,
+            "Statistically_Significant": None,
         })
+
+holm_values = holm_adjust([row["Wilcoxon_pvalue_raw"] for row in stat_records])
+for row, adjusted_p in zip(stat_records, holm_values):
+    row["Holm_Adjusted_Wilcoxon_pvalue"] = adjusted_p
+    row["Statistically_Significant"] = "YES (Holm p < 0.05)" if adjusted_p < 0.05 else "NO"
 
 stat_df = pd.DataFrame(stat_records)
 stat_df.to_csv(RESULTS_DIR / "statistical_tests.csv", index=False)
