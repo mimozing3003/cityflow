@@ -10,10 +10,10 @@ import numpy as np
 
 try:
     from trajectory_windowing import contiguous_segments, iter_window_starts
-    from group_splitting import split_group_keys
+    from group_splitting import split_group_keys, select_group_keys
 except ImportError:
     from scripts.trajectory_windowing import contiguous_segments, iter_window_starts
-    from scripts.group_splitting import split_group_keys
+    from scripts.group_splitting import split_group_keys, select_group_keys
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -72,17 +72,18 @@ def extract_dataset_windows_flexible(csv_path, id_cols, time_col, x_col, y_col, 
         viable_trajs.append(key)
         group_dict[key] = v_df_sorted
 
-    rng = random.Random(SEED)
-    rng.shuffle(viable_trajs)
-    if len(viable_trajs) > max_trajs:
-        viable_trajs = viable_trajs[:max_trajs]
-
     id_names = id_cols if isinstance(id_cols, list) else [id_cols]
-    key_to_recording = {}
+    all_key_to_recording = {}
     for key in viable_trajs:
         key_values = tuple(key) if isinstance(key, tuple) else (key,)
         key_map = {name: value for name, value in zip(id_names, key_values)}
-        key_to_recording[key] = str(key_map.get("run_index", key_map.get("recording_id", key_map.get("session_id", ""))))
+        all_key_to_recording[key] = str(key_map.get("run_index", key_map.get("recording_id", key_map.get("session_id", ""))))
+
+    viable_trajs = select_group_keys(
+        viable_trajs, all_key_to_recording, max_groups=max_trajs,
+        split_unit=split_unit, seed=SEED
+    )
+    key_to_recording = {key: all_key_to_recording[key] for key in viable_trajs}
 
     split_keys, split_audit = split_group_keys(
         viable_trajs, key_to_recording, split_unit=split_unit, seed=SEED
