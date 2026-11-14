@@ -64,3 +64,8 @@ The TGSIM training/benchmark extractors now split each track at duplicate, out-o
 
 
 The statistical uncertainty protocol and the limitation of trajectory- versus session-level inference are documented in [CLUSTERED_STATISTICAL_PROTOCOL.md](CLUSTERED_STATISTICAL_PROTOCOL.md). Historical bootstrap confidence intervals in the research report are provisional until regenerated from the corrected script on the exact source datasets.
+
+
+### Supplementary figures: no synthetic empirical claims
+
+The previous supplementary-figure script used hardcoded dataset speeds/counts, random-normal feature values, and a hand-entered correlation matrix. It has been replaced with a provenance-gated generator. Use `--diagram-only` for a method schematic; empirical plots require audited dataset-summary and single-domain canonical feature-sample CSVs linked by SHA-256. See [FIGURE_DATA_PROVENANCE_AUDIT.md](FIGURE_DATA_PROVENANCE_AUDIT.md).
