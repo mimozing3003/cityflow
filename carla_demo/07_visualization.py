@@ -119,7 +119,7 @@ class CarlaVisualizer:
         self.screen.blit(t_warn_sub, (16, 48))
 
     def _draw_telemetry_panel(self, telem):
-        p_w, p_h = 290, 240
+        p_w, p_h = 290, 260
         x, y = 16, 80
         panel = pygame.Surface((p_w, p_h), pygame.SRCALPHA)
         panel.fill((20, 24, 32, 220))
@@ -131,9 +131,21 @@ class CarlaVisualizer:
         self.screen.blit(t_head, (x + 12, y + 10))
         pygame.draw.line(self.screen, self.c_border, (x + 12, y + 28), (x + p_w - 12, y + 28), 1)
 
+        prediction_ready = bool(telem.get("prediction_ready", True))
+        if prediction_ready and telem.get("latency_ms") is not None:
+            latency_text = f"{telem['latency_ms']:.2f} ms"
+            prediction_text = "READY"
+        else:
+            latency_text = "waiting for history"
+            prediction_text = (
+                f"WARM-UP {telem.get('history_frames', 0)}/"
+                f"{telem.get('history_required', 30)}"
+            )
+
         items = [
             ("Simulator FPS", f"{telem.get('fps', 0.0):.1f} Hz (10 FPS target)"),
-            ("Inference Latency", f"{telem.get('latency_ms', 0.0):.2f} ms"),
+            ("Prediction Status", prediction_text),
+            ("Inference Latency", latency_text),
             ("Compute Device", f"{telem.get('device', 'CUDA')}"),
             ("Model Architecture", "GRU (2 layers, 128 hid)"),
             ("Model Parameters", "227,132 (Frozen I-24)"),
