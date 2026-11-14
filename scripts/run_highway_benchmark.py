@@ -12,12 +12,12 @@ try:
     from trajectory_windowing import contiguous_segments, iter_window_starts
     from cluster_statistics import cluster_bootstrap_ci, paired_cluster_test, holm_adjust
     from benchmark_artifacts import build_prediction_rows, build_window_metadata_rows
-    from group_splitting import split_group_keys
+    from group_splitting import split_group_keys, select_group_keys
 except ImportError:
     from scripts.trajectory_windowing import contiguous_segments, iter_window_starts
     from scripts.cluster_statistics import cluster_bootstrap_ci, paired_cluster_test, holm_adjust
     from scripts.benchmark_artifacts import build_prediction_rows, build_window_metadata_rows
-    from scripts.group_splitting import split_group_keys
+    from scripts.group_splitting import split_group_keys, select_group_keys
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -86,18 +86,18 @@ def extract_dataset_windows(csv_path, id_cols, time_col, x_col, y_col, stride=15
         viable_trajs.append(key)
         group_dict[key] = v_df_sorted
 
-    # Deterministic shuffle
-    rng = random.Random(SEED)
-    rng.shuffle(viable_trajs)
-    if len(viable_trajs) > max_trajs:
-        viable_trajs = viable_trajs[:max_trajs]
-
-    # Build an explicit recording/run key for every viable trajectory.
-    key_to_recording = {}
+    # Build recording/run IDs before sampling so the cap cannot silently drop a run.
+    all_key_to_recording = {}
     for key in viable_trajs:
         key_values = tuple(key) if isinstance(key, tuple) else (key,)
         key_map = {name: value for name, value in zip(id_names, key_values)}
-        key_to_recording[key] = str(key_map.get("run_index", key_map.get("recording_id", key_map.get("session_id", ""))))
+        all_key_to_recording[key] = str(key_map.get("run_index", key_map.get("recording_id", key_map.get("session_id", ""))))
+
+    viable_trajs = select_group_keys(
+        viable_trajs, all_key_to_recording, max_groups=max_trajs,
+        split_unit=split_unit, seed=SEED
+    )
+    key_to_recording = {key: all_key_to_recording[key] for key in viable_trajs}
 
     split_keys, split_audit = split_group_keys(
         viable_trajs, key_to_recording, split_unit=split_unit, seed=SEED
