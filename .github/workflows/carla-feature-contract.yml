@@ -6,6 +6,7 @@ on:
       - "carla_demo/04_spawn_scene.py"
       - "carla_demo/05_feature_engine.py"
       - "scripts/audit_demo_trajectory_lineage.py"
+      - "scripts/audit_tgsim_source_data.py"
       - "curla demostrate/*.csv"
       - "carla_demo/07_visualization.py"
       - "carla_demo/08_run_demo.py"
@@ -16,6 +17,7 @@ on:
       - "audit/carla-feature-validity-gate"
       - "fix/carla-inference-history-warmup"
       - "audit/demo-trajectory-lineage"
+      - "data/tgsim-source-auditor"
 
 jobs:
   feature-contract:
