@@ -1,0 +1,179 @@
+{
+  "schema_version": "1.0",
+  "project": "TrajPilot CityFlow",
+  "release_id": "REPLACE_WITH_VERSION",
+  "code_commit": "REQUIRED_GIT_COMMIT_SHA",
+  "datasets": [
+    {
+      "name": "I-24 MOTION",
+      "product_id": "REQUIRED_EXACT_PRODUCT",
+      "version": "REQUIRED_EXACT_RELEASE_EG_V1.1.1",
+      "provider_citation": "REQUIRED",
+      "license_or_eula": "I-24 MOTION DATA USE AGREEMENT",
+      "retrieval_instructions": "REQUIRED",
+      "documentation_version": "REQUIRED",
+      "retrieved_at_utc": "REQUIRED",
+      "files": [
+        {
+          "path": "REQUIRED_RELATIVE_PATH",
+          "sha256": "REQUIRED_SHA256",
+          "bytes": 0
+        }
+      ],
+      "coordinate_reference": "REQUIRED",
+      "spatial_units": "REQUIRED",
+      "timestamp_unit": "REQUIRED",
+      "sampling_hz": 10,
+      "recording_id_column": "REQUIRED",
+      "vehicle_id_column": "REQUIRED",
+      "data_dictionary_path": "REQUIRED"
+    },
+    {
+      "name": "TGSIM I-294",
+      "product_id": "I-294 L2 OR L1 — SPECIFY",
+      "version": "REQUIRED",
+      "provider_citation": "FHWA/ITS JPO RECOMMENDED CITATION",
+      "license_or_eula": "PUBLIC DATA.GOV PRODUCT TERMS",
+      "retrieval_instructions": "REQUIRED",
+      "retrieved_at_utc": "REQUIRED",
+      "files": [
+        {
+          "path": "REQUIRED_RELATIVE_PATH",
+          "sha256": "REQUIRED_SHA256",
+          "bytes": 0
+        }
+      ],
+      "coordinate_reference": "RUN-SPECIFIC REFERENCE IMAGE",
+      "spatial_units": "METRES AFTER 0.3 M/PIXEL TRANSFORM",
+      "timestamp_unit": "REQUIRED",
+      "sampling_hz": 10,
+      "recording_id_column": "REQUIRED",
+      "vehicle_id_column": "REQUIRED",
+      "data_dictionary_path": "REQUIRED"
+    },
+    {
+      "name": "TGSIM I-90/I-94",
+      "product_id": "MOVING OR STATIONARY — SPECIFY",
+      "version": "REQUIRED",
+      "provider_citation": "FHWA/ITS JPO RECOMMENDED CITATION",
+      "license_or_eula": "PUBLIC DATA.GOV PRODUCT TERMS",
+      "retrieval_instructions": "REQUIRED",
+      "retrieved_at_utc": "REQUIRED",
+      "files": [
+        {
+          "path": "REQUIRED_RELATIVE_PATH",
+          "sha256": "REQUIRED_SHA256",
+          "bytes": 0
+        }
+      ],
+      "coordinate_reference": "RUN-SPECIFIC REFERENCE IMAGE",
+      "spatial_units": "METRES AFTER 0.3 M/PIXEL TRANSFORM",
+      "timestamp_unit": "REQUIRED",
+      "sampling_hz": 10,
+      "recording_id_column": "REQUIRED",
+      "vehicle_id_column": "REQUIRED",
+      "data_dictionary_path": "REQUIRED"
+    },
+    {
+      "name": "TGSIM Foggy Bottom",
+      "product_id": "FOGGY BOTTOM TRAJECTORIES",
+      "version": "REQUIRED",
+      "provider_citation": "FHWA/ITS JPO RECOMMENDED CITATION",
+      "license_or_eula": "PUBLIC DATA.GOV PRODUCT TERMS",
+      "retrieval_instructions": "REQUIRED",
+      "retrieved_at_utc": "REQUIRED",
+      "files": [
+        {
+          "path": "REQUIRED_RELATIVE_PATH",
+          "sha256": "REQUIRED_SHA256",
+          "bytes": 0
+        }
+      ],
+      "coordinate_reference": "REFERENCE IMAGE; TOP-LEFT ORIGIN AND OFFICIAL SEGMENT POLYGONS",
+      "spatial_units": "METRES AFTER 0.0186613838586 M/PIXEL TRANSFORM",
+      "timestamp_unit": "REQUIRED",
+      "sampling_hz": 10,
+      "recording_id_column": "REQUIRED",
+      "vehicle_id_column": "REQUIRED",
+      "road_user_type_column": "REQUIRED",
+      "data_dictionary_path": "REQUIRED"
+    }
+  ],
+  "preprocessing": {
+    "entrypoint": "REQUIRED",
+    "source_mapping_path": "REQUIRED",
+    "feature_definition_path": "REQUIRED",
+    "target_builder_path": "REQUIRED",
+    "input_history_steps": 30,
+    "future_steps": 30,
+    "sample_period_seconds": 0.1,
+    "target_coordinate_frame": "REQUIRED_AND_VERIFIED",
+    "tests_command": "REQUIRED"
+  },
+  "splits": {
+    "manifest_path": "REQUIRED",
+    "grouping_unit": "recording_or_session",
+    "seed": "REQUIRED",
+    "leakage_audit_path": "REQUIRED"
+  },
+  "models": [
+    {
+      "name": "REQUIRED",
+      "training_script": "REQUIRED",
+      "checkpoint_path": "REQUIRED",
+      "checkpoint_sha256": "REQUIRED",
+      "normalizer_path": "REQUIRED_OR_NULL",
+      "normalizer_sha256": "REQUIRED_OR_NULL",
+      "hyperparameters_path": "REQUIRED",
+      "environment_lock_path": "REQUIRED"
+    }
+  ],
+  "predictions": {
+    "per_episode_table_path": "REQUIRED",
+    "required_columns": [
+      "recording_id",
+      "episode_id",
+      "model",
+      "horizon_step",
+      "timestamp",
+      "pred_x",
+      "pred_y",
+      "true_x",
+      "true_y",
+      "valid"
+    ],
+    "held_out_split": "test"
+  },
+  "evaluation": {
+    "script_path": "REQUIRED",
+    "metrics_path": "REQUIRED",
+    "horizons_seconds": [
+      1,
+      2,
+      3
+    ],
+    "cluster_bootstrap": {
+      "group_column": "recording_id",
+      "confidence_level": 0.95,
+      "replicates": 10000,
+      "seed": "REQUIRED"
+    },
+    "paired_comparison_method": "REQUIRED",
+    "multiplicity_correction": "REQUIRED",
+    "latency_boundary": "model_only_and_end_to_end"
+  },
+  "carla": {
+    "version": "0.9.16",
+    "scenario_manifest_path": "REQUIRED",
+    "raw_episode_directory": "REQUIRED",
+    "feature_parity_status": "NOT_PROVEN_UNTIL_AUDITED"
+  },
+  "manuscript": {
+    "source_path": "REQUIRED",
+    "bibliography_path": "REQUIRED",
+    "tables_generated_by": "REQUIRED_EVALUATION_SCRIPT",
+    "figures_generated_by": "REQUIRED_EVALUATION_SCRIPT",
+    "data_availability_statement": "REQUIRED",
+    "limitations_section": "REQUIRED"
+  }
+}
