@@ -15,7 +15,7 @@ class ClusterInferenceRegressionTests(unittest.TestCase):
 
     def test_report_marks_historical_confidence_intervals_provisional(self):
         report = (ROOT / "TRAJPILOT_RESEARCH_REPORT.md").read_text(encoding="utf-8")
-        self.assertIn("window-level bootstrap", report.lower())
+        self.assertIn("overlapping windows", report.lower())
         self.assertIn("must be regenerated", report.lower())
 
 
