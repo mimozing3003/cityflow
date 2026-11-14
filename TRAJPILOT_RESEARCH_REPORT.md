@@ -1,3 +1,5 @@
+> **Figure provenance warning (14 November 2026):** the legacy supplementary-figure script used hardcoded dataset speeds/counts, random-normal synthetic feature samples, and a manually entered correlation matrix while labelling the outputs empirical. Those historical plots are not measured evidence and must not be used in the final paper. The replacement generator refuses empirical output until audited dataset summaries and SHA-256-linked, real single-domain feature samples are supplied. See `FIGURE_DATA_PROVENANCE_AUDIT.md`.
+
 # TrajPilot CityFlow — Comprehensive Scientific Research Report
 
 > **Project:** TrajPilot CityFlow Autonomous Vehicle Trajectory Prediction  
