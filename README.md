@@ -40,3 +40,6 @@ The research report contains historical benchmark claims that must be regenerate
 
 
 Dataset provenance and non-equivalence notes for I-24 MOTION and the individual TGSIM products are in [DATASET_PROVENANCE_NOTES.md](DATASET_PROVENANCE_NOTES.md). Exact local source-file hashes and extraction counts are still required.
+
+
+TGSIM's published source-field semantics and the conservative canonical feature mapping are documented in [TGSIM_FEATURE_SEMANTICS_AUDIT.md](TGSIM_FEATURE_SEMANTICS_AUDIT.md). Regenerate the local mapping with `python scripts/generate_feature_mapping.py`; the output is intentionally written under the ignored data/manifests directory and is not itself evidence of source-file validation.
