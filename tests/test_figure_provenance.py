@@ -84,7 +84,7 @@ class FigureProvenanceTests(unittest.TestCase):
         source=(Path(__file__).resolve().parents[1]/"scripts/generate_supplementary_figures.py").read_text(encoding="utf-8")
         self.assertNotIn("np.random.normal",source)
         self.assertNotIn("corr_matrix = np.array",source)
-        self.assertIn("cross-domain feature pooling is prohibited",source.lower())
+        self.assertIn("cross-domain pooling is prohibited",source.lower())
 
 
 if __name__=="__main__": unittest.main()
