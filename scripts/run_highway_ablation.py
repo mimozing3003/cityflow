@@ -17,6 +17,11 @@ import seaborn as sns
 from scipy import stats
 import joblib
 
+try:
+    from cluster_statistics import cluster_bootstrap_ci, paired_cluster_test, holm_adjust
+except ImportError:
+    from scripts.cluster_statistics import cluster_bootstrap_ci, paired_cluster_test, holm_adjust
+
 from sklearn.linear_model import Ridge
 from xgboost import XGBRegressor
 
@@ -709,9 +714,9 @@ df_seed.to_csv(TABLES_DIR / "seed_robustness.csv", index=False)
 print("Saved seed robustness results to data/results/highway_ablation/seed_robustness.csv")
 
 # ==============================================================================
-# EXPERIMENT 10: BOOTSTRAP CONFIDENCE INTERVALS (SECTION 13)
+# EXPERIMENT 10: TRAJECTORY-CLUSTER BOOTSTRAP CONFIDENCE INTERVALS
 # ==============================================================================
-print("\n[10/18] Calculating 1,000 Trajectory-Level Bootstrap Confidence Intervals (95% CI)...")
+print("\\n[10/18] Calculating 1,000 trajectory-cluster Bootstrap Confidence Intervals (95% CI)...")
 bootstrap_records = []
 N_BOOT = 1000
 
@@ -722,6 +727,9 @@ for dname, ddata in [("TGSIM_I294_L2", data_i294), ("TGSIM_I90_I94_MOVING", data
     X_te = (ddata["test"]["X30"] - mean) / std
     Y_tr = ddata["train"]["Y"].reshape(len(ddata["train"]["Y"]), -1)
     Y_te = ddata["test"]["Y"]
+    trajectory_ids = np.asarray(ddata["test"]["traj_id"], dtype=str)
+    if len(trajectory_ids) != len(Y_te):
+        raise RuntimeError(f"Trajectory IDs do not align with test windows for {dname}.")
 
     r_pred = Ridge(alpha=10.0).fit(X_tr.reshape(len(X_tr), -1), Y_tr).predict(X_te.reshape(len(X_te), -1)).reshape(-1, 30, 2)
     x_pred = XGBRegressor(n_estimators=20, max_depth=5, learning_rate=0.1, tree_method="hist", random_state=SEED, n_jobs=-1).fit(X_tr.reshape(len(X_tr), -1), Y_tr).predict(X_te.reshape(len(X_te), -1)).reshape(-1, 30, 2)
@@ -733,44 +741,41 @@ for dname, ddata in [("TGSIM_I294_L2", data_i294), ("TGSIM_I90_I94_MOVING", data
         ("XGBoost", x_pred)
     ]
 
-    N = len(Y_te)
-    rng_b = np.random.RandomState(SEED)
-
     for m_name, p in all_preds:
         err = np.linalg.norm(p - Y_te, axis=-1)
         sample_ades = err.mean(axis=1)
         sample_fdes = err[:, -1]
-
-        boot_ades = []
-        boot_fdes = []
-        for _ in range(N_BOOT):
-            boot_idx = rng_b.randint(0, N, size=N)
-            boot_ades.append(sample_ades[boot_idx].mean())
-            boot_fdes.append(sample_fdes[boot_idx].mean())
-
-        ade_ci = np.percentile(boot_ades, [2.5, 97.5])
-        fde_ci = np.percentile(boot_fdes, [2.5, 97.5])
+        ade_boot = cluster_bootstrap_ci(
+            sample_ades, trajectory_ids, n_boot=N_BOOT, confidence=0.95, seed=SEED
+        )
+        fde_boot = cluster_bootstrap_ci(
+            sample_fdes, trajectory_ids, n_boot=N_BOOT, confidence=0.95, seed=SEED
+        )
 
         bootstrap_records.append({
             "Dataset": dname,
             "Model": m_name,
-            "Mean_ADE": round(float(np.mean(boot_ades)), 4),
-            "ADE_95_CI_Lower": round(float(ade_ci[0]), 4),
-            "ADE_95_CI_Upper": round(float(ade_ci[1]), 4),
-            "Mean_FDE": round(float(np.mean(boot_fdes)), 4),
-            "FDE_95_CI_Lower": round(float(fde_ci[0]), 4),
-            "FDE_95_CI_Upper": round(float(fde_ci[1]), 4)
+            "Mean_ADE": round(ade_boot["estimate"], 4),
+            "ADE_95_CI_Lower": round(ade_boot["ci_lower"], 4),
+            "ADE_95_CI_Upper": round(ade_boot["ci_upper"], 4),
+            "Mean_FDE": round(fde_boot["estimate"], 4),
+            "FDE_95_CI_Lower": round(fde_boot["ci_lower"], 4),
+            "FDE_95_CI_Upper": round(fde_boot["ci_upper"], 4),
+            "Test_Windows": ade_boot["n_observations"],
+            "Trajectory_Clusters": ade_boot["n_clusters"],
+            "Bootstrap_Unit": "trajectory_id",
+            "Session_Level_Inference": "NOT_ESTABLISHED"
         })
 
 df_boot = pd.DataFrame(bootstrap_records)
 df_boot.to_csv(RESULTS_DIR / "bootstrap_confidence_intervals.csv", index=False)
 df_boot.to_csv(TABLES_DIR / "bootstrap_confidence_intervals.csv", index=False)
-print("Saved bootstrap confidence intervals to data/results/highway_ablation/bootstrap_confidence_intervals.csv")
+print("Saved trajectory-cluster confidence intervals to data/results/highway_ablation/bootstrap_confidence_intervals.csv")
 
 # ==============================================================================
-# EXPERIMENT 11: PAIRED MODEL STATISTICAL COMPARISONS (SECTION 14)
+# EXPERIMENT 11: PAIRED CLUSTER-LEVEL MODEL STATISTICAL COMPARISONS
 # ==============================================================================
-print("\n[11/18] Performing Paired Per-Trajectory Wilcoxon Signed-Rank & t-Tests...")
+print("\\n[11/18] Performing paired tests on per-trajectory mean errors...")
 paired_records = []
 for dname, ddata in [("TGSIM_I294_L2", data_i294), ("TGSIM_I90_I94_MOVING", data_i90)]:
     mean = scalers[dname]["mean"]
@@ -779,6 +784,7 @@ for dname, ddata in [("TGSIM_I294_L2", data_i294), ("TGSIM_I90_I94_MOVING", data
     X_te = (ddata["test"]["X30"] - mean) / std
     Y_tr = ddata["train"]["Y"].reshape(len(ddata["train"]["Y"]), -1)
     Y_te = ddata["test"]["Y"]
+    trajectory_ids = np.asarray(ddata["test"]["traj_id"], dtype=str)
 
     r_pred = Ridge(alpha=10.0).fit(X_tr.reshape(len(X_tr), -1), Y_tr).predict(X_te.reshape(len(X_te), -1)).reshape(-1, 30, 2)
     x_pred = XGBRegressor(n_estimators=20, max_depth=5, learning_rate=0.1, tree_method="hist", random_state=SEED, n_jobs=-1).fit(X_tr.reshape(len(X_tr), -1), Y_tr).predict(X_te.reshape(len(X_te), -1)).reshape(-1, 30, 2)
@@ -795,27 +801,37 @@ for dname, ddata in [("TGSIM_I294_L2", data_i294), ("TGSIM_I90_I94_MOVING", data
     ]
 
     for pair_name, fde_base, fde_mod, ade_base, ade_mod in pairs:
-        diff_fde = fde_base - fde_mod
-        diff_ade = ade_base - ade_mod
-
-        w_stat, w_p = stats.wilcoxon(fde_base, fde_mod)
-        t_stat, t_p = stats.ttest_rel(fde_base, fde_mod)
-
-        cohen_d = float(np.mean(diff_fde) / (np.std(diff_fde) + 1e-6))
-        pct_fde_imp = (np.mean(diff_fde) / np.mean(fde_base)) * 100
+        fde_test = paired_cluster_test(fde_base, fde_mod, trajectory_ids)
+        ade_test = paired_cluster_test(ade_base, ade_mod, trajectory_ids)
+        mean_fde_diff = fde_test["mean_difference_base_minus_model"]
+        mean_ade_diff = ade_test["mean_difference_base_minus_model"]
+        pct_fde_imp = (mean_fde_diff / np.mean(fde_base)) * 100
 
         paired_records.append({
             "Dataset": dname,
             "Comparison": pair_name,
-            "Mean_FDE_Diff_m": round(float(np.mean(diff_fde)), 4),
-            "Median_FDE_Diff_m": round(float(np.median(diff_fde)), 4),
-            "Mean_ADE_Diff_m": round(float(np.mean(diff_ade)), 4),
+            "Trajectory_Clusters": fde_test["n_clusters"],
+            "Test_Unit": "per-trajectory mean",
+            "Mean_FDE_Diff_m": round(mean_fde_diff, 4),
+            "Median_FDE_Diff_m": round(fde_test["median_difference_base_minus_model"], 4),
+            "Mean_ADE_Diff_m": round(mean_ade_diff, 4),
             "Pct_FDE_Improvement": f"{pct_fde_imp:+.2f}%",
-            "Wilcoxon_pvalue": f"{w_p:.2e}",
-            "Paired_t_pvalue": f"{t_p:.2e}",
-            "Cohens_d_Effect_Size": round(cohen_d, 4),
-            "Significance": "STATISTICALLY_SIGNIFICANT (p < 0.001)" if w_p < 0.001 else "NOT_SIGNIFICANT"
+            "Wilcoxon_pvalue": f"{fde_test['wilcoxon_pvalue']:.6g}",
+            "Wilcoxon_pvalue_raw": fde_test["wilcoxon_pvalue"],
+            "Paired_t_pvalue": f"{fde_test['paired_t_pvalue']:.6g}",
+            "Cohens_d_Effect_Size": round(fde_test["cohens_d_paired"], 4),
+            "Holm_Adjusted_Wilcoxon_pvalue": None,
+            "Significance": None
         })
+
+# Holm-Bonferroni correction across all FDE model comparisons and both datasets.
+holm_values = holm_adjust([record["Wilcoxon_pvalue_raw"] for record in paired_records])
+for record, adjusted_p in zip(paired_records, holm_values):
+    record["Holm_Adjusted_Wilcoxon_pvalue"] = adjusted_p
+    record["Significance"] = (
+        "STATISTICALLY_SIGNIFICANT (Holm-adjusted p < 0.05)"
+        if adjusted_p < 0.05 else "NOT_SIGNIFICANT"
+    )
 
 df_paired = pd.DataFrame(paired_records)
 df_paired.to_csv(RESULTS_DIR / "paired_model_tests.csv", index=False)
