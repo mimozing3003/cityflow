@@ -2,6 +2,11 @@ import json
 import os
 from pathlib import Path
 import numpy as np
+
+try:
+    from trajectory_windowing import contiguous_segments, iter_window_starts
+except ImportError:
+    from scripts.trajectory_windowing import contiguous_segments, iter_window_starts
 import pandas as pd
 import torch
 import torch.nn as nn
@@ -90,12 +95,12 @@ def extract_tgsim_dataset(csv_path, id_cols, time_col, x_col, y_col, stride=15, 
         xs = v_df[x_col].values
         ys = v_df[y_col].values
         
-        # Check continuity
-        dts = np.diff(times)
-        if len(dts) == 0 or np.max(dts) > 0.25:
-            continue
-            
-        for start in range(0, len(v_df) - 60 + 1, stride):
+        # Split at every duplicate, out-of-order, or non-10-Hz interval.
+        # No history/target window may cross a missing-sample boundary.
+        for _, _, start in iter_window_starts(
+            times, history_steps=30, future_steps=30, stride=stride,
+            nominal_dt=0.1, tolerance=0.025
+        ):
             hist_x = xs[start : start + 30]
             hist_y = ys[start : start + 30]
             fut_x = xs[start + 30 : start + 60]
@@ -138,7 +143,7 @@ def extract_tgsim_dataset(csv_path, id_cols, time_col, x_col, y_col, stride=15, 
                     feats[t, 4] = (spd_t - feats[t-5, 2]) / 0.5
                 if spd_t > 0.1:
                     psi_t = np.arctan2(vy_t, vx_t)
-                    psi_prev = np.arctan2(feats[t-1, 1], max(feats[t-1, 0], 1e-4))
+                    psi_prev = np.arctan2(feats[t-1, 1], feats[t-1, 0])
                     dpsi = (psi_t - psi_prev + np.pi) % (2 * np.pi) - np.pi
                     feats[t, 5] = dpsi / 0.1
                     feats[t, 6] = feats[t, 5] / max(spd_t, 1.0)
