@@ -83,3 +83,7 @@ Mark a gate PASS only when the artifact is present and an independent command/au
 Not when the prose is polished. It is final only after every acceptance gate above is PASS, the results are reproducible from released artifacts, and the manuscript contains no unsupported claims.
 
 No calendar completion estimate is provided: the blockers depend on recovering and verifying research artifacts, not on writing speed.
+
+## 7. Newly identified statistical validity blocker
+
+The previous highway ablation pipeline resampled overlapping windows individually for its nominal "trajectory-level" bootstrap and ran paired Wilcoxon/t-tests on window-level errors. The windows are correlated within each vehicle track. Those existing confidence intervals and p-values are not acceptable as final-paper inference. The code has been corrected to use trajectory-cluster bootstrap and paired tests on per-trajectory mean errors, with Holm adjustment across six FDE comparisons; see [CLUSTERED_STATISTICAL_PROTOCOL.md](CLUSTERED_STATISTICAL_PROTOCOL.md). The corrected code has not yet been run against the actual TGSIM source files, and it still does not establish session-level independence because the benchmark split is vehicle/trajectory-disjoint rather than recording/session-disjoint.
