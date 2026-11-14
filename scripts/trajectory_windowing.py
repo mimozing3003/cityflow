@@ -38,12 +38,27 @@ def contiguous_segments(
         current = values[index]
         valid_pair = math.isfinite(previous) and math.isfinite(current)
         delta = current - previous if valid_pair else float("nan")
-        continuous = valid_pair and delta > 0 and abs(delta - nominal_dt) <= tolerance
 
-        if not continuous:
+        if not valid_pair:
             if index - segment_start >= 1:
                 segments.append((segment_start, index))
             segment_start = index if math.isfinite(current) else index + 1
+            continue
+
+        if delta <= 0:
+            # The current row is duplicated or out of order. Drop it rather
+            # than letting it become the first sample of the next segment.
+            if index - segment_start >= 1:
+                segments.append((segment_start, index))
+            segment_start = index + 1
+            continue
+
+        if abs(delta - nominal_dt) > tolerance:
+            # A positive gap breaks continuity, but the current timestamp is
+            # valid and may begin a new segment.
+            if index - segment_start >= 1:
+                segments.append((segment_start, index))
+            segment_start = index
 
     if len(values) - segment_start >= 1:
         segments.append((segment_start, len(values)))
