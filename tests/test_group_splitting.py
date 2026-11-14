@@ -29,11 +29,11 @@ class RecordingDisjointSplitTests(unittest.TestCase):
 
     def test_recording_stratified_cap_keeps_every_run(self):
         selected = select_group_keys(
-            self.keys, self.to_recording, max_groups=3,
+            self.keys, self.to_recording, max_groups=4,
             split_unit="recording", seed=4
         )
-        self.assertEqual(len(selected), 3)
-        self.assertEqual({self.to_recording[key] for key in selected}, {"run_1", "run_2", "run_3", "run_4"} - {"run_4"})
+        self.assertEqual(len(selected), 4)
+        self.assertEqual({self.to_recording[key] for key in selected}, {"run_1", "run_2", "run_3", "run_4"})
 
     def test_recording_cap_rejects_less_slots_than_runs(self):
         with self.assertRaises(ValueError):
