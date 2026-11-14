@@ -3,12 +3,16 @@ name: CARLA feature validity gate
 on:
   pull_request:
     paths:
+      - "carla_demo/04_spawn_scene.py"
       - "carla_demo/05_feature_engine.py"
+      - "carla_demo/07_visualization.py"
+      - "carla_demo/08_run_demo.py"
       - "tests/**"
       - ".github/workflows/carla-feature-contract.yml"
   push:
     branches:
       - "audit/carla-feature-validity-gate"
+      - "fix/carla-inference-history-warmup"
 
 jobs:
   feature-contract:
