@@ -87,3 +87,8 @@ No calendar completion estimate is provided: the blockers depend on recovering a
 ## 7. Newly identified statistical validity blocker
 
 The previous highway ablation pipeline resampled overlapping windows individually for its nominal "trajectory-level" bootstrap and ran paired Wilcoxon/t-tests on window-level errors. The windows are correlated within each vehicle track. Those existing confidence intervals and p-values are not acceptable as final-paper inference. The code has been corrected to use trajectory-cluster bootstrap and paired tests on per-trajectory mean errors, with Holm adjustment across six FDE comparisons; see [CLUSTERED_STATISTICAL_PROTOCOL.md](CLUSTERED_STATISTICAL_PROTOCOL.md). The corrected code has not yet been run against the actual TGSIM source files, and it still does not establish session-level independence because the benchmark split is vehicle/trajectory-disjoint rather than recording/session-disjoint.
+
+
+## 8. Newly identified figure-provenance blocker
+
+The legacy supplementary-figure generator used synthetic random-normal feature samples, hardcoded dataset speeds/counts, and a hand-entered correlation matrix while labelling outputs empirical. Those historical feature-distribution, correlation, and dataset-overview plots are not valid empirical evidence. The replacement generator requires audited SHA-256-linked dataset summaries and a real feature-sample CSV from one dataset at a time. The empirical mode has not yet been run because the source-backed feature-sample artifact is not tracked. See [FIGURE_DATA_PROVENANCE_AUDIT.md](FIGURE_DATA_PROVENANCE_AUDIT.md).
