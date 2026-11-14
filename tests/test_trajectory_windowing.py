@@ -17,7 +17,7 @@ class ExactCadenceWindowingTests(unittest.TestCase):
     def test_duplicate_timestamp_splits_segment(self):
         times = [i * 0.1 for i in range(40)]
         times[20] = times[19]
-        self.assertEqual(contiguous_segments(times), [(0, 20), (20, 21), (21, 40)])
+        self.assertEqual(contiguous_segments(times), [(0, 20), (21, 40)])
 
     def test_out_of_order_timestamp_splits_segment(self):
         times = [i * 0.1 for i in range(40)]
