@@ -43,3 +43,16 @@ Dataset provenance and non-equivalence notes for I-24 MOTION and the individual 
 
 
 TGSIM's published source-field semantics and the conservative canonical feature mapping are documented in [TGSIM_FEATURE_SEMANTICS_AUDIT.md](TGSIM_FEATURE_SEMANTICS_AUDIT.md). Regenerate the local mapping with `python scripts/generate_feature_mapping.py`; the output is intentionally written under the ignored data/manifests directory and is not itself evidence of source-file validation.
+
+
+### Auditing a locally downloaded TGSIM source file
+
+The source auditor is intentionally local-file based; it does not download restricted or large datasets automatically. Example:
+
+```bash
+python scripts/audit_tgsim_source_data.py --dataset TGSIM_I294_L2 --csv data/raw/TGSIM_I294_L2/I294_L2_final.csv --output reports/i294_source_audit.json
+python scripts/audit_tgsim_source_data.py --dataset TGSIM_I90_I94_MOVING --csv data/raw/TGSIM_I90_I94_MOVING/I90_94_moving_final.csv --output reports/i90_moving_source_audit.json
+python scripts/audit_tgsim_source_data.py --dataset TGSIM_FOGGY_BOTTOM --csv "data/raw/TGSIM_FOGGY_BOTTOM/TGSIM-Foggy-Bottom-Data.csv" --output reports/foggy_bottom_source_audit.json
+```
+
+It accepts only explicit published hyphenated or documented normalized underscore aliases, rejects ambiguous headers, hashes the exact input file, and blocks recording/session-level lineage when no recording/run identifier is present. It does not prove feature parity or transform image/reference coordinates.
