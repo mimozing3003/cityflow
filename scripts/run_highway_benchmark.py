@@ -107,7 +107,9 @@ def extract_dataset_windows(csv_path, id_cols, time_col, x_col, y_col, stride=15
     split_manifest = []
     recording_to_splits = {}
     for split_name, keys in split_keys.items():
-        for key in keys:
+        for key in viable_trajs:
+            if key not in keys:
+                continue
             key_values = tuple(key) if isinstance(key, tuple) else (key,)
             key_map = {name: value for name, value in zip(id_names, key_values)}
             recording_id = str(key_map.get("run_index", key_map.get("recording_id", key_map.get("session_id", ""))))
@@ -256,10 +258,10 @@ def extract_dataset_windows(csv_path, id_cols, time_col, x_col, y_col, stride=15
         "recording_id_available": bool(recording_to_splits),
         "distinct_recording_ids": len(recording_to_splits),
         "recording_split_overlap_count": recording_split_overlap_count,
-        "recording_session_disjoint_split": bool(recording_to_splits) and recording_split_overlap_count == 0,
+        "recording_run_disjoint_split": split_unit == "recording" and bool(recording_to_splits) and recording_split_overlap_count == 0,
+        "recording_session_disjoint_split": False,
         "split_unit": split_unit,
         "recording_split_disjoint": split_audit["recording_disjoint"],
-        "recording_split_overlap_count": split_audit["recording_split_overlap_count"],
         "train_recording_ids": split_audit.get("train_recording_ids", []),
         "val_recording_ids": split_audit.get("val_recording_ids", []),
         "test_recording_ids": split_audit.get("test_recording_ids", []),
@@ -269,7 +271,7 @@ def extract_dataset_windows(csv_path, id_cols, time_col, x_col, y_col, stride=15
     data_dict["split_manifest"] = split_manifest
     return data_dict, audit_row
 
-print("Extracting TGSIM Highway Datasets with Vehicle-Disjoint Splitting...")
+print("Extracting TGSIM Highway Datasets with Recording-Disjoint Splitting...")
 data_i294, audit_i294 = extract_dataset_windows(
     Path("data/raw/TGSIM_I294_L2/I294_L2_final.csv"),
     ["id", "run_index"], "time", "xloc_kf", "yloc_kf", stride=12, max_trajs=300, split_unit="recording"
