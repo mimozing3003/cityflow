@@ -148,12 +148,12 @@ class CarlaFeatureEngine:
             interaction_avail = False
 
         # 4. Lane Context Features
-        # Exact I-24 lane markers (L_Approach, R_Approach, etc.) are unproven in CARLA Town geometry.
-        # We mark them explicitly as APPROXIMATE/UNRESOLVED.
-        l_approach = 0.0
-        r_approach = 0.0
-        l_adjacent = 0.0
-        r_adjacent = 0.0
+        # These features are unresolved: writing 0.0 would falsely mark them as observed
+        # valid values in the model input. NaN activates the explicit missingness channels.
+        l_approach = np.nan
+        r_approach = np.nan
+        l_adjacent = np.nan
+        r_adjacent = np.nan
 
         # 5. Assemble 16-feature vector
         features = np.array([
