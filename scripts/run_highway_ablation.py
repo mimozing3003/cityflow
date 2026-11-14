@@ -716,7 +716,7 @@ print("Saved seed robustness results to data/results/highway_ablation/seed_robus
 # ==============================================================================
 # EXPERIMENT 10: TRAJECTORY-CLUSTER BOOTSTRAP CONFIDENCE INTERVALS
 # ==============================================================================
-print("\\n[10/18] Calculating 1,000 trajectory-cluster Bootstrap Confidence Intervals (95% CI)...")
+print("\n[10/18] Calculating 1,000 trajectory-cluster Bootstrap Confidence Intervals (95% CI)...")
 bootstrap_records = []
 N_BOOT = 1000
 
@@ -775,7 +775,7 @@ print("Saved trajectory-cluster confidence intervals to data/results/highway_abl
 # ==============================================================================
 # EXPERIMENT 11: PAIRED CLUSTER-LEVEL MODEL STATISTICAL COMPARISONS
 # ==============================================================================
-print("\\n[11/18] Performing paired tests on per-trajectory mean errors...")
+print("\n[11/18] Performing paired tests on per-trajectory mean errors...")
 paired_records = []
 for dname, ddata in [("TGSIM_I294_L2", data_i294), ("TGSIM_I90_I94_MOVING", data_i90)]:
     mean = scalers[dname]["mean"]
