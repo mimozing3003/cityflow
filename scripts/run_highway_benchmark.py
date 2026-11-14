@@ -12,10 +12,12 @@ try:
     from trajectory_windowing import contiguous_segments, iter_window_starts
     from cluster_statistics import cluster_bootstrap_ci, paired_cluster_test, holm_adjust
     from benchmark_artifacts import build_prediction_rows, build_window_metadata_rows
+    from group_splitting import split_group_keys
 except ImportError:
     from scripts.trajectory_windowing import contiguous_segments, iter_window_starts
     from scripts.cluster_statistics import cluster_bootstrap_ci, paired_cluster_test, holm_adjust
     from scripts.benchmark_artifacts import build_prediction_rows, build_window_metadata_rows
+    from scripts.group_splitting import split_group_keys
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -63,7 +65,7 @@ def sha256_file(path):
     return digest.hexdigest()
 
 
-def extract_dataset_windows(csv_path, id_cols, time_col, x_col, y_col, stride=15, max_trajs=300):
+def extract_dataset_windows(csv_path, id_cols, time_col, x_col, y_col, stride=15, max_trajs=300, split_unit="trajectory"):
     csv_path = Path(csv_path)
     source_sha256 = sha256_file(csv_path)
     df = pd.read_csv(csv_path)
@@ -90,16 +92,18 @@ def extract_dataset_windows(csv_path, id_cols, time_col, x_col, y_col, stride=15
     if len(viable_trajs) > max_trajs:
         viable_trajs = viable_trajs[:max_trajs]
 
-    # Vehicle-disjoint split: 70% train, 15% val, 15% test
-    n_total = len(viable_trajs)
-    n_train = int(0.70 * n_total)
-    n_val = int(0.15 * n_total)
-    
-    train_keys = set(viable_trajs[:n_train])
-    val_keys = set(viable_trajs[n_train:n_train + n_val])
-    test_keys = set(viable_trajs[n_train + n_val:])
+    # Build an explicit recording/run key for every viable trajectory.
+    key_to_recording = {}
+    for key in viable_trajs:
+        key_values = tuple(key) if isinstance(key, tuple) else (key,)
+        key_map = {name: value for name, value in zip(id_names, key_values)}
+        key_to_recording[key] = str(key_map.get("run_index", key_map.get("recording_id", key_map.get("session_id", ""))))
 
-    split_keys = {"train": train_keys, "val": val_keys, "test": test_keys}
+    split_keys, split_audit = split_group_keys(
+        viable_trajs, key_to_recording, split_unit=split_unit, seed=SEED
+    )
+    n_total = len(viable_trajs)
+    train_keys, val_keys, test_keys = split_keys["train"], split_keys["val"], split_keys["test"]
     split_manifest = []
     recording_to_splits = {}
     for split_name, keys in split_keys.items():
@@ -253,7 +257,13 @@ def extract_dataset_windows(csv_path, id_cols, time_col, x_col, y_col, stride=15
         "distinct_recording_ids": len(recording_to_splits),
         "recording_split_overlap_count": recording_split_overlap_count,
         "recording_session_disjoint_split": bool(recording_to_splits) and recording_split_overlap_count == 0,
-        "session_level_inference": "NOT_ESTABLISHED_UNLESS_RECORDING_SPLIT_DISJOINT_AND_RUN_SEMANTICS_VERIFIED",
+        "split_unit": split_unit,
+        "recording_split_disjoint": split_audit["recording_disjoint"],
+        "recording_split_overlap_count": split_audit["recording_split_overlap_count"],
+        "train_recording_ids": split_audit.get("train_recording_ids", []),
+        "val_recording_ids": split_audit.get("val_recording_ids", []),
+        "test_recording_ids": split_audit.get("test_recording_ids", []),
+        "session_level_inference": "RUN_DISJOINT_SPLIT_ONLY; GENERALIZATION_INFERENCE_REQUIRES_MULTIPLE_HELD_OUT_RUNS",
         "source_file_sha256": source_sha256,
     }
     data_dict["split_manifest"] = split_manifest
@@ -262,12 +272,12 @@ def extract_dataset_windows(csv_path, id_cols, time_col, x_col, y_col, stride=15
 print("Extracting TGSIM Highway Datasets with Vehicle-Disjoint Splitting...")
 data_i294, audit_i294 = extract_dataset_windows(
     Path("data/raw/TGSIM_I294_L2/I294_L2_final.csv"),
-    ["id", "run_index"], "time", "xloc_kf", "yloc_kf", stride=12, max_trajs=300
+    ["id", "run_index"], "time", "xloc_kf", "yloc_kf", stride=12, max_trajs=300, split_unit="recording"
 )
 
 data_i90, audit_i90 = extract_dataset_windows(
     Path("data/raw/TGSIM_I90_I94_MOVING/I90_94_moving_final.csv"),
-    ["ID", "run_index"], "time", "xloc_kf", "yloc_kf", stride=15, max_trajs=300
+    ["ID", "run_index"], "time", "xloc_kf", "yloc_kf", stride=15, max_trajs=300, split_unit="recording"
 )
 
 # Extract OOD Foggy Bottom
