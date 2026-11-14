@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-10-27T22:02:40.459026",
+  "carla_server_version": "0.9.16",
+  "carla_client_version": "0.9.16",
+  "map": "Carla/Maps/Town10HD_Opt",
+  "road_id": 12,
+  "lane_id": 1,
+  "device": "cuda",
+  "model_parameters": 227132,
+  "checkpoint": "C:\\Users\\SOMUJIT\\Desktop\\cityflow\\data\\models\\gru_baseline\\best_gru_baseline.pt",
+  "prediction_origin_step": 29,
+  "prediction_origin_sim_time_s": 212.3356550708413,
+  "eval_horizon_seconds": 3.0,
+  "eval_horizon_steps": 30,
+  "metrics": {
+    "ade_1s_m": 2.4685,
+    "fde_1s_m": 4.3229,
+    "ade_2s_m": 5.0398,
+    "fde_2s_m": 9.8318,
+    "ade_3s_m": 7.4798,
+    "fde_3s_m": 14.365
+  },
+  "forecast_comparison": {
+    "predicted_lon_travel_m": 24.882,
+    "ground_truth_lon_travel_m": 10.5176,
+    "predicted_lat_travel_m": 0.121,
+    "ground_truth_lat_travel_m": -0.001
+  },
+  "status": "PASS_SINGLE_RUN_DEMO"
+}

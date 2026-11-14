@@ -1,0 +1,111 @@
+{
+  "project": "TrajPilot CityFlow",
+  "dataset_source": "I-24 MOTION",
+  "carla_version": "0.9.16",
+  "checkpoint": "C:\\Users\\SOMUJIT\\Desktop\\cityflow\\data\\models\\gru_baseline\\best_gru_baseline.pt",
+  "input_dim": 32,
+  "raw_feature_dim": 16,
+  "history_steps": 30,
+  "future_steps": 30,
+  "target_dim": 2,
+  "target_representation": "ego_aligned",
+  "target_horizon_seconds": 3.0,
+  "history_seconds": 3.0,
+  "nominal_dt_seconds": 0.1,
+  "feature_order": [
+    "vx_causal",
+    "vy_causal",
+    "speed_derived",
+    "acceleration_native",
+    "acceleration_causal_0p5s",
+    "turn_rate_valid",
+    "curvature_valid",
+    "jerk_causal",
+    "SpaceGap",
+    "RelativeVelocity",
+    "LateralDistance",
+    "time_headway",
+    "L_Approach",
+    "R_Approach",
+    "L_Adjacent",
+    "R_Adjacent"
+  ],
+  "model_feature_order": [
+    "vx_causal",
+    "vy_causal",
+    "speed_derived",
+    "acceleration_native",
+    "acceleration_causal_0p5s",
+    "turn_rate_valid",
+    "curvature_valid",
+    "jerk_causal",
+    "SpaceGap",
+    "RelativeVelocity",
+    "LateralDistance",
+    "time_headway",
+    "L_Approach",
+    "R_Approach",
+    "L_Adjacent",
+    "R_Adjacent",
+    "vx_causal_missing",
+    "vy_causal_missing",
+    "speed_derived_missing",
+    "acceleration_native_missing",
+    "acceleration_causal_0p5s_missing",
+    "turn_rate_valid_missing",
+    "curvature_valid_missing",
+    "jerk_causal_missing",
+    "SpaceGap_missing",
+    "RelativeVelocity_missing",
+    "LateralDistance_missing",
+    "time_headway_missing",
+    "L_Approach_missing",
+    "R_Approach_missing",
+    "L_Adjacent_missing",
+    "R_Adjacent_missing"
+  ],
+  "parameter_count": 227132,
+  "normalization": {
+    "source": "C:\\Users\\SOMUJIT\\Desktop\\cityflow\\data\\processed\\i24_sequences\\gru_inputs\\train_normalization_statistics.csv",
+    "fit_partition": "train",
+    "method": "z_score",
+    "missing_value_representation": "explicit_binary_mask"
+  },
+  "architecture": {
+    "input_projection": "Linear(32,128)+LayerNorm(128)",
+    "encoder": "GRU(128,128,num_layers=2,batch_first=True,dropout=0.1)",
+    "decoder": "Linear(128,128)+GELU+LayerNorm(128)+Linear(128,60)",
+    "reshape": "(30,2)"
+  },
+  "carla_feature_policy": {
+    "measured_or_derived": [
+      "vx_causal",
+      "vy_causal",
+      "speed_derived",
+      "acceleration_native",
+      "acceleration_causal_0p5s",
+      "turn_rate_valid",
+      "curvature_valid",
+      "jerk_causal"
+    ],
+    "geometric_interaction_candidate": [
+      "SpaceGap",
+      "RelativeVelocity",
+      "LateralDistance",
+      "time_headway",
+      "L_Adjacent",
+      "R_Adjacent"
+    ],
+    "not_claimed_exact_without_source_formula": [
+      "L_Approach",
+      "R_Approach"
+    ]
+  },
+  "scientific_status": {
+    "checkpoint_verified": true,
+    "16_to_32_interface_verified": true,
+    "feature_order_verified": true,
+    "exact_CARLA_equivalence_of_all_16_features": false,
+    "reason": "56ZA confirms frozen feature order/grouping but not every original mathematical feature-construction formula."
+  }
+}

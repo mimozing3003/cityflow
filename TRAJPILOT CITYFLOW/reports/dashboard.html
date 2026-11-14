@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TrajPilot CityFlow — Research Dashboard</title>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg-base:#0a0d14;--bg-card:#111827;--bg-card2:#161f2e;--border:#1e2d42;
+    --accent1:#3b82f6;--accent2:#8b5cf6;--accent3:#06b6d4;--accent4:#10b981;
+    --accent5:#f59e0b;--accent-red:#ef4444;
+    --text1:#f1f5f9;--text2:#94a3b8;--text3:#64748b;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{font-family:'Inter',sans-serif;background:var(--bg-base);color:var(--text1);min-height:100vh;overflow-x:hidden;}
+  .header{background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#0f172a 100%);border-bottom:1px solid var(--border);padding:32px 48px 24px;position:relative;overflow:hidden;}
+  .header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 20% 50%,rgba(59,130,246,.08) 0%,transparent 70%),radial-gradient(ellipse 40% 60% at 80% 50%,rgba(139,92,246,.06) 0%,transparent 70%);pointer-events:none;}
+  .header-inner{position:relative;max-width:1400px;margin:0 auto;}
+  .header-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);border-radius:20px;padding:4px 14px;font-size:11px;font-weight:600;color:var(--accent1);letter-spacing:.05em;margin-bottom:12px;}
+  .dot-pulse{width:6px;height:6px;border-radius:50%;background:var(--accent4);animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .header h1{font-size:clamp(24px,3.5vw,42px);font-weight:800;letter-spacing:-.02em;background:linear-gradient(135deg,#f1f5f9 0%,#93c5fd 50%,#c4b5fd 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .header p{margin-top:8px;color:var(--text2);font-size:14px;max-width:600px;}
+  .header-meta{display:flex;gap:16px;margin-top:20px;flex-wrap:wrap;}
+  .meta-chip{display:flex;align-items:center;gap:8px;background:var(--bg-card2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;}
+  .meta-chip .val{font-weight:700;color:var(--accent1);font-family:'JetBrains Mono',monospace;}
+  .meta-chip .lbl{color:var(--text2);}
+  .nav{background:rgba(10,13,20,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;padding:0 48px;}
+  .nav-inner{max-width:1400px;margin:0 auto;display:flex;gap:4px;overflow-x:auto;}
+  .nav-btn{background:none;border:none;color:var(--text2);padding:14px 18px;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;position:relative;transition:color .2s;font-family:'Inter',sans-serif;}
+  .nav-btn::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--accent1);border-radius:2px 2px 0 0;transform:scaleX(0);transition:transform .2s;}
+  .nav-btn:hover{color:var(--text1);}
+  .nav-btn.active{color:var(--accent1);}
+  .nav-btn.active::after{transform:scaleX(1);}
+  .main{max-width:1400px;margin:0 auto;padding:32px 48px 80px;}
+  .section{display:none;}
+  .section.active{display:block;animation:fadeIn .3s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .section-title{font-size:22px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:10px;}
+  .section-sub{color:var(--text2);font-size:13px;margin-bottom:28px;}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:32px;}
+  .stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden;transition:border-color .2s,transform .2s;}
+  .stat-card:hover{border-color:var(--accent1);transform:translateY(-2px);}
+  .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--grad);}
+  .stat-val{font-size:28px;font-weight:800;font-family:'JetBrains Mono',monospace;}
+  .stat-lbl{font-size:11px;color:var(--text2);margin-top:4px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;}
+  .stat-sub{font-size:11px;color:var(--text3);margin-top:8px;}
+  .card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:24px;}
+  .card-title{font-size:14px;font-weight:600;color:var(--text1);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+  .tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:.05em;}
+  .tag-ml{background:rgba(59,130,246,.15);color:var(--accent1);}
+  .tag-carla{background:rgba(139,92,246,.15);color:var(--accent2);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr;}}
+  .plot-box{width:100%;min-height:340px;}
+  .plot-box-tall{width:100%;min-height:420px;}
+  .tbl-wrap{overflow-x:auto;border-radius:8px;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  thead tr{background:rgba(30,45,66,.8);}
+  th{text-align:left;padding:10px 14px;font-weight:600;font-size:11px;color:var(--text2);letter-spacing:.05em;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap;}
+  td{padding:9px 14px;border-bottom:1px solid rgba(30,45,66,.5);color:var(--text1);white-space:nowrap;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:rgba(59,130,246,.04);}
+  .best{color:var(--accent4);font-weight:700;}
+  .worst{color:var(--accent-red);}
+  .neutral{color:var(--text2);}
+  .badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.04em;}
+  .badge-green{background:rgba(16,185,129,.15);color:var(--accent4);}
+  .badge-blue{background:rgba(59,130,246,.15);color:var(--accent1);}
+  .badge-red{background:rgba(239,68,68,.15);color:var(--accent-red);}
+  .badge-amber{background:rgba(245,158,11,.15);color:var(--accent5);}
+  .badge-purple{background:rgba(139,92,246,.15);color:var(--accent2);}
+  .filter-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;}
+  .filter-btn{background:var(--bg-card2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:7px 16px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;}
+  .filter-btn.on{background:rgba(59,130,246,.15);border-color:var(--accent1);color:var(--accent1);}
+  .filter-btn:hover{border-color:var(--accent1);}
+  select{background:var(--bg-card2);border:1px solid var(--border);color:var(--text1);border-radius:8px;padding:8px 12px;font-size:13px;font-family:'Inter',sans-serif;cursor:pointer;outline:none;}
+  .info-banner{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:14px 18px;font-size:12.5px;color:var(--text2);margin-bottom:20px;line-height:1.6;}
+  .info-banner strong{color:var(--accent1);}
+  .scenario-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:16px;}
+  .scen-card{background:var(--bg-card2);border:1px solid var(--border);border-radius:12px;padding:18px;transition:border-color .2s;}
+  .scen-card:hover{border-color:var(--accent2);}
+  .scen-name{font-size:13px;font-weight:700;margin-bottom:4px;}
+  .scen-desc{font-size:11px;color:var(--text2);margin-bottom:14px;}
+  .scen-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .scen-model{font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace;min-width:55px;}
+  .scen-bar-wrap{flex:1;margin:0 10px;height:5px;background:rgba(255,255,255,.06);border-radius:3px;}
+  .scen-bar{height:5px;border-radius:3px;}
+  .scen-fde{font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600;min-width:52px;text-align:right;}
+  .scen-winner{margin-top:12px;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.04);}
+  .footer{text-align:center;padding:32px;color:var(--text3);font-size:12px;border-top:1px solid var(--border);margin-top:48px;}
+  .pipeline-wrap{display:flex;gap:0;align-items:center;flex-wrap:wrap;row-gap:12px;}
+  .pipe-node{border-radius:8px;padding:12px 18px;font-size:12px;text-align:center;min-width:120px;}
+  .pipe-arrow{color:var(--text3);padding:0 8px;font-size:18px;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="header-badge"><div class="dot-pulse"></div>RESEARCH DASHBOARD &middot; LIVE RESULTS</div>
+    <h1>TrajPilot CityFlow</h1>
+    <p>Vehicle Trajectory Prediction &amp; Cross-Domain Autonomous Driving Research Framework</p>
+    <div class="header-meta">
+      <div class="meta-chip"><span class="lbl">Source Domain</span><span class="val">I-24 MOTION</span></div>
+      <div class="meta-chip"><span class="lbl">Targets</span><span class="val">TGSIM &times; 3</span></div>
+      <div class="meta-chip"><span class="lbl">History</span><span class="val">3 s / 10 Hz</span></div>
+      <div class="meta-chip"><span class="lbl">Future</span><span class="val">3 s / 10 Hz</span></div>
+      <div class="meta-chip"><span class="lbl">Frozen GRU</span><span class="val" style="font-size:10px">c233a182&hellip;1d22f</span></div>
+      <div class="meta-chip"><span class="lbl">Notebook</span><span class="val">87 cells &middot; 0 errors</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="nav">
+  <div class="nav-inner">
+    <button class="nav-btn active" id="nb-overview" onclick="showSection('overview',this)">&#128202; Overview</button>
+    <button class="nav-btn" id="nb-highway"  onclick="showSection('highway',this)">&#128739; Highway Benchmark</button>
+    <button class="nav-btn" id="nb-carla"    onclick="showSection('carla',this)">&#128663; CARLA Evaluation</button>
+    <button class="nav-btn" id="nb-ablation" onclick="showSection('ablation',this)">&#128300; Ablation &amp; Robustness</button>
+    <button class="nav-btn" id="nb-features" onclick="showSection('features',this)">&#128200; Feature Analysis</button>
+    <button class="nav-btn" id="nb-horizon"  onclick="showSection('horizon',this)">&#9202; Horizon Analysis</button>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- OVERVIEW -->
+<div id="sec-overview" class="section active">
+  <div class="section-title">&#128202; Project Overview</div>
+  <div class="section-sub">End-to-end summary of all research stages.</div>
+  <div class="stat-grid">
+    <div class="stat-card" style="--grad:linear-gradient(90deg,#3b82f6,#8b5cf6)"><div class="stat-val" style="color:#3b82f6">1.537 m</div><div class="stat-lbl">Best Highway FDE</div><div class="stat-sub">KC-XGBoost · TGSIM I-294 &amp; I-90/94</div></div>
+    <div class="stat-card" style="--grad:linear-gradient(90deg,#10b981,#06b6d4)"><div class="stat-val" style="color:#10b981">36%</div><div class="stat-lbl">ML vs CV Improvement</div><div class="stat-sub">Highway datasets vs. zero-param baseline</div></div>
+    <div class="stat-card" style="--grad:linear-gradient(90deg,#8b5cf6,#ec4899)"><div class="stat-val" style="color:#8b5cf6">6/6</div><div class="stat-lbl">CARLA Scenarios</div><div class="stat-sub">Physically valid &middot; 0 violations</div></div>
+    <div class="stat-card" style="--grad:linear-gradient(90deg,#f59e0b,#ef4444)"><div class="stat-val" style="color:#f59e0b">6.2 kHz</div><div class="stat-lbl">CARLA Inference FPS</div><div class="stat-sub">Ridge @ ~0.16 ms per step</div></div>
+    <div class="stat-card" style="--grad:linear-gradient(90deg,#06b6d4,#3b82f6)"><div class="stat-val" style="color:#06b6d4">8</div><div class="stat-lbl">Causal Features</div><div class="stat-sub">16-dim input (8 features &times; 2 targets)</div></div>
+    <div class="stat-card" style="--grad:linear-gradient(90deg,#10b981,#8b5cf6)"><div class="stat-val" style="color:#10b981">0</div><div class="stat-lbl">Physical Violations</div><div class="stat-sub">Kinematically constrained models</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="card-title">Final Model FDE Comparison <span class="tag tag-ml">REAL-WORLD</span></div><div id="plot-ov-bar" class="plot-box"></div></div>
+    <div class="card"><div class="card-title">CARLA Scenario FDE Heatmap <span class="tag tag-carla">SIMULATION</span></div><div id="plot-ov-heat" class="plot-box"></div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Research Pipeline</div>
+    <div class="pipeline-wrap">
+      <div class="pipe-node" style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3)"><div style="font-size:18px;margin-bottom:4px">&#127950;</div><div style="font-weight:700;color:#93c5fd">I-24 MOTION</div><div style="color:var(--text3);font-size:10px">Source Domain</div></div>
+      <div class="pipe-arrow">&rarr;</div>
+      <div class="pipe-node" style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3)"><div style="font-size:18px;margin-bottom:4px">&#129504;</div><div style="font-weight:700;color:#6ee7b7">GRU Baseline</div><div style="color:var(--text3);font-size:10px">Frozen Checkpoint</div></div>
+      <div class="pipe-arrow">&rarr;</div>
+      <div class="pipe-node" style="background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3)"><div style="font-size:18px;margin-bottom:4px">&#128202;</div><div style="font-weight:700;color:#c4b5fd">TGSIM Transfer</div><div style="color:var(--text3);font-size:10px">Cross-Dataset Eval</div></div>
+      <div class="pipe-arrow">&rarr;</div>
+      <div class="pipe-node" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3)"><div style="font-size:18px;margin-bottom:4px">&#127942;</div><div style="font-weight:700;color:#fcd34d">Highway Benchmark</div><div style="color:var(--text3);font-size:10px">6 Models &middot; 2 Datasets</div></div>
+      <div class="pipe-arrow">&rarr;</div>
+      <div class="pipe-node" style="background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.3)"><div style="font-size:18px;margin-bottom:4px">&#128663;</div><div style="font-weight:700;color:#67e8f9">CARLA Transfer</div><div style="color:var(--text3);font-size:10px">6 Scenarios &middot; Sim</div></div>
+      <div class="pipe-arrow">&rarr;</div>
+      <div class="pipe-node" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3)"><div style="font-size:18px;margin-bottom:4px">&#128300;</div><div style="font-weight:700;color:#fca5a5">Ablation Study</div><div style="color:var(--text3);font-size:10px">Features &middot; Noise &middot; History</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- HIGHWAY -->
+<div id="sec-highway" class="section">
+  <div class="section-title">&#128739; Highway Multi-Model Benchmark</div>
+  <div class="section-sub">TGSIM I-294 L2 and TGSIM I-90/I-94 Moving &mdash; 6 models across 2 real-world highway datasets.</div>
+  <div class="info-banner"><strong>Metric:</strong> ADE = Average Displacement Error, FDE = Final Displacement Error (metres, lower is better). <strong>CV</strong> = Constant Velocity (zero-parameter kinematic reference baseline).</div>
+  <div class="filter-row">
+    <button class="filter-btn on" onclick="setDataset('both',this)">Both Datasets</button>
+    <button class="filter-btn" onclick="setDataset('I294',this)">TGSIM I-294 L2</button>
+    <button class="filter-btn" onclick="setDataset('I90',this)">TGSIM I-90/I-94</button>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="card-title">FDE by Model <span class="tag tag-ml">&#8595; LOWER IS BETTER</span></div><div id="plot-hw-fde" class="plot-box-tall"></div></div>
+    <div class="card"><div class="card-title">ADE by Model <span class="tag tag-ml">&#8595; LOWER IS BETTER</span></div><div id="plot-hw-ade" class="plot-box-tall"></div></div>
+  </div>
+  <div class="card"><div class="card-title">Full Leaderboard Table</div><div class="tbl-wrap" id="hw-table-wrap"></div></div>
+  <div class="grid2">
+    <div class="card"><div class="card-title">Inference Latency vs. FDE <span class="tag tag-ml">PARETO</span></div><div id="plot-hw-pareto" class="plot-box"></div></div>
+    <div class="card"><div class="card-title">Bootstrap 95% CI &mdash; FDE <span class="tag tag-ml">STATISTICAL</span></div><div id="plot-boot-ci" class="plot-box"></div></div>
+  </div>
+</div>
+
+<!-- CARLA -->
+<div id="sec-carla" class="section">
+  <div class="section-title">&#128663; CARLA Scenario Evaluation</div>
+  <div class="section-sub">Feature-equivalent offline simulation &mdash; 6 highway scenarios. Winners computed from FDE minimum across Ridge, XGBoost, CV, CA.</div>
+  <div class="info-banner"><strong>CARLA Win Counts (from artifact FDE minimums):</strong> CA wins 3/6 (abrupt dynamics) &middot; Ridge wins 1/6 (curve negotiation, 60.9% vs CV) &middot; XGBoost wins 1/6 (lane change) &middot; S1 TIE CV &amp; CA (steady cruise, both = 0.000 m). All 6 scenarios pass physical validity.</div>
+  <div class="stat-grid">
+    <div class="stat-card" style="--grad:linear-gradient(90deg,#f59e0b,#10b981)"><div class="stat-val" style="color:#f59e0b">3/6</div><div class="stat-lbl">CA Wins</div><div class="stat-sub">Abrupt dynamic scenarios (FDE min)</div></div>
+    <div class="stat-card" style="--grad:linear-gradient(90deg,#3b82f6,#8b5cf6)"><div class="stat-val" style="color:#3b82f6">1/6</div><div class="stat-lbl">Ridge Wins</div><div class="stat-sub">S5: Curved negotiation</div></div>
+    <div class="stat-card" style="--grad:linear-gradient(90deg,#8b5cf6,#ec4899)"><div class="stat-val" style="color:#8b5cf6">1/6</div><div class="stat-lbl">XGBoost Wins</div><div class="stat-sub">S4: High-speed lane change</div></div>
+    <div class="stat-card" style="--grad:linear-gradient(90deg,#06b6d4,#3b82f6)"><div class="stat-val" style="color:#06b6d4">1/6</div><div class="stat-lbl">Tie (S1)</div><div class="stat-sub">CV = CA = 0.000 m, steady state</div></div>
+  </div>
+  <div class="card"><div class="card-title">FDE per Scenario &mdash; All Models <span class="tag tag-carla">CARLA</span></div><div id="plot-carla-bar" class="plot-box-tall"></div></div>
+  <div class="card"><div class="card-title">Scenario Cards &mdash; FDE Breakdown <span class="tag tag-carla">CARLA</span></div><div class="scenario-grid" id="scenario-grid"></div></div>
+  <div class="card"><div class="card-title">Inference Latency &amp; Throughput <span class="tag tag-carla">RUNTIME</span></div><div id="plot-carla-latency" class="plot-box"></div></div>
+</div>
+
+<!-- ABLATION -->
+<div id="sec-ablation" class="section">
+  <div class="section-title">&#128300; Ablation &amp; Robustness Study</div>
+  <div class="section-sub">History length ablation, noise robustness, and feature group ablation.</div>
+  <div class="grid2">
+    <div class="card"><div class="card-title">History Length Ablation &mdash; FDE <span class="tag tag-ml">ABLATION</span></div><div id="plot-hist-abl" class="plot-box-tall"></div></div>
+    <div class="card"><div class="card-title">Noise Robustness &mdash; FDE <span class="tag tag-ml">ROBUSTNESS</span></div><div id="plot-noise" class="plot-box-tall"></div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Feature Group Ablation &mdash; FDE Impact <span class="tag tag-ml">ABLATION</span>
+      <select id="abl-ds-sel" onchange="renderFeatureAblation()" style="margin-left:auto">
+        <option value="I294">TGSIM I-294 L2</option>
+        <option value="I90">TGSIM I-90/I-94</option>
+      </select>
+    </div>
+    <div id="plot-feat-abl" class="plot-box-tall"></div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<div id="sec-features" class="section">
+  <div class="section-title">&#128200; Feature Importance Analysis</div>
+  <div class="section-sub">XGBoost permutation importance and Ridge normalized linear weights across both datasets.</div>
+  <div class="grid2">
+    <div class="card"><div class="card-title">XGBoost Permutation Importance <span class="tag tag-ml">I-294</span></div><div id="plot-xgb-i294" class="plot-box-tall"></div></div>
+    <div class="card"><div class="card-title">XGBoost Permutation Importance <span class="tag tag-ml">I-90/I-94</span></div><div id="plot-xgb-i90" class="plot-box-tall"></div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="card-title">Ridge Normalized Coefficient Weight <span class="tag tag-ml">I-294</span></div><div id="plot-ridge-i294" class="plot-box-tall"></div></div>
+    <div class="card"><div class="card-title">Ridge Normalized Coefficient Weight <span class="tag tag-ml">I-90/I-94</span></div><div id="plot-ridge-i90" class="plot-box-tall"></div></div>
+  </div>
+  <div class="card"><div class="card-title">Leave-One-Feature-Out &mdash; FDE Increase <span class="tag tag-ml">LOFO</span></div><div id="plot-lofo" class="plot-box-tall"></div></div>
+</div>
+
+<!-- HORIZON -->
+<div id="sec-horizon" class="section">
+  <div class="section-title">&#9202; Horizon Analysis</div>
+  <div class="section-sub">Cumulative ADE and displacement error as prediction horizon grows from 0.5 s to 3.0 s.</div>
+  <div class="filter-row">
+    <button class="filter-btn on" onclick="setHorizonDs('I294',this)">TGSIM I-294 L2</button>
+    <button class="filter-btn" onclick="setHorizonDs('I90',this)">TGSIM I-90/I-94</button>
+  </div>
+  <div class="card"><div class="card-title">Cumulative ADE vs. Prediction Horizon</div><div id="plot-horizon" class="plot-box-tall"></div></div>
+  <div class="card"><div class="card-title">Displacement Error vs. Horizon</div><div id="plot-horizon-disp" class="plot-box-tall"></div></div>
+</div>
+
+</div><!-- /main -->
+<div class="footer">TrajPilot CityFlow Research Dashboard &middot; All metrics from executed notebook artifacts &middot; Frozen I-24 GRU SHA-256: <span style="font-family:'JetBrains Mono',monospace">c233a182&hellip;1d22f</span> &middot; 0 notebook errors</div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────────────
+const HW = [
+  {ds:"I294",Model:"Constant Velocity (CV)",Cat:"Physics",ADE:0.9981,FDE:2.6742,RMSE:1.214,Params:0,Lat:0.001,Imp:"+0.00%"},
+  {ds:"I294",Model:"Constant Acceleration (CA)",Cat:"Physics",ADE:1.0473,FDE:2.8943,RMSE:1.3241,Params:0,Lat:0.001,Imp:"-8.23%"},
+  {ds:"I294",Model:"Linear Regression",Cat:"ML",ADE:0.6968,FDE:1.8553,RMSE:0.9617,Params:14400,Lat:0.002,Imp:"+30.62%"},
+  {ds:"I294",Model:"Random Forest",Cat:"ML",ADE:0.7682,FDE:1.9755,RMSE:1.0209,Params:4000,Lat:0.028,Imp:"+26.13%"},
+  {ds:"I294",Model:"XGBoost",Cat:"ML",ADE:0.6679,FDE:1.7103,RMSE:0.9225,Params:1200,Lat:0.007,Imp:"+36.04%"},
+  {ds:"I294",Model:"MLP",Cat:"DL",ADE:2.7815,FDE:15.5528,RMSE:3.8682,Params:55612,Lat:0.001,Imp:"-481.59%"},
+  {ds:"I294",Model:"LSTM",Cat:"DL",ADE:0.6688,FDE:1.7477,RMSE:0.9178,Params:57392,Lat:0.007,Imp:"+34.64%"},
+  {ds:"I294",Model:"GRU",Cat:"DL",ADE:0.677,FDE:1.7606,RMSE:0.9238,Params:45872,Lat:0.006,Imp:"+34.16%"},
+  {ds:"I294",Model:"TCN",Cat:"DL",ADE:0.6886,FDE:1.7969,RMSE:0.9343,Params:51872,Lat:0.003,Imp:"+32.80%"},
+  {ds:"I294",Model:"Transformer",Cat:"DL",ADE:0.6954,FDE:1.8163,RMSE:0.9417,Params:76272,Lat:0.007,Imp:"+32.07%"},
+  {ds:"I90",Model:"Constant Velocity (CV)",Cat:"Physics",ADE:0.6764,FDE:1.7531,RMSE:0.8285,Params:0,Lat:0.001,Imp:"+0.00%"},
+  {ds:"I90",Model:"Constant Acceleration (CA)",Cat:"Physics",ADE:0.6548,FDE:1.7112,RMSE:0.7949,Params:0,Lat:0.001,Imp:"+2.39%"},
+  {ds:"I90",Model:"Linear Regression",Cat:"ML",ADE:0.4812,FDE:1.254,RMSE:0.6222,Params:14400,Lat:0.001,Imp:"+28.49%"},
+  {ds:"I90",Model:"Random Forest",Cat:"ML",ADE:0.5432,FDE:1.3697,RMSE:0.6793,Params:4000,Lat:0.026,Imp:"+21.89%"},
+  {ds:"I90",Model:"XGBoost",Cat:"ML",ADE:0.5218,FDE:1.3972,RMSE:0.6627,Params:1200,Lat:0.006,Imp:"+20.30%"},
+  {ds:"I90",Model:"MLP",Cat:"DL",ADE:1.8702,FDE:9.5266,RMSE:2.6157,Params:55612,Lat:0.001,Imp:"-443.34%"},
+  {ds:"I90",Model:"LSTM",Cat:"DL",ADE:0.4782,FDE:1.2583,RMSE:0.6119,Params:57392,Lat:0.007,Imp:"+28.24%"},
+  {ds:"I90",Model:"GRU",Cat:"DL",ADE:0.4795,FDE:1.2638,RMSE:0.6138,Params:45872,Lat:0.005,Imp:"+27.93%"},
+  {ds:"I90",Model:"TCN",Cat:"DL",ADE:0.4855,FDE:1.2821,RMSE:0.6213,Params:51872,Lat:0.003,Imp:"+26.88%"},
+  {ds:"I90",Model:"Transformer",Cat:"DL",ADE:0.4875,FDE:1.2969,RMSE:0.6268,Params:76272,Lat:0.007,Imp:"+26.03%"},
+];
+const CARLA=[
+  {s:"S1: Steady Cruise",d:"Cruising @ 64 mph steady flow",R:0.6048,X:2.5529,C:0.0,A:0.0,lat:0.162,fps:6172.5},
+  {s:"S2: Highway Accel",d:"Ramp acceleration 45-67 mph",R:7.4645,X:9.1344,C:8.4545,A:0.2727,lat:0.1622,fps:6163.5},
+  {s:"S3: Hard Braking",d:"Hard braking from 63 mph",R:16.7127,X:47.7615,C:15.1868,A:1.1555,lat:0.1851,fps:5403.4},
+  {s:"S4: Lane Change",d:"Standard 3.75m lateral lane change",R:9.9981,X:7.306,C:8.0405,A:8.4831,lat:0.2079,fps:4810.2},
+  {s:"S5: Curve Negot.",d:"Curved interstate exit / bend",R:2.2662,X:5.3261,C:5.7991,A:5.7991,lat:0.1515,fps:6601.3},
+  {s:"S6: Congested Queue",d:"Shockwave queue deceleration to stop",R:11.1251,X:55.8707,C:7.5778,A:0.6333,lat:0.152,fps:6577.4},
+];
+const HIST=[
+  {ds:"I294",h:"1s",Rg:1.9834,Xg:2.0614},{ds:"I294",h:"2s",Rg:1.7109,Xg:1.8022},
+  {ds:"I294",h:"3s",Rg:1.5261,Xg:1.9809},{ds:"I294",h:"5s",Rg:1.6843,Xg:2.1017},
+  {ds:"I90",h:"1s",Rg:1.5234,Xg:1.9714},{ds:"I90",h:"2s",Rg:1.3018,Xg:1.6453},
+  {ds:"I90",h:"3s",Rg:1.2132,Xg:1.8013},{ds:"I90",h:"5s",Rg:1.3892,Xg:2.422},
+];
+const NOISE=[
+  {ds:"I294",n:"0%",CV:2.2909,Rg:1.5261,Xg:1.9809},
+  {ds:"I294",n:"1%",CV:2.4704,Rg:1.5295,Xg:1.9876},
+  {ds:"I294",n:"5%",CV:3.1876,Rg:1.5414,Xg:2.0218},
+  {ds:"I294",n:"10%",CV:4.2543,Rg:1.5743,Xg:2.0897},
+  {ds:"I294",n:"20%",CV:6.8821,Rg:1.6782,Xg:2.2341},
+  {ds:"I90",n:"0%",CV:1.677,Rg:1.2132,Xg:1.8013},
+  {ds:"I90",n:"1%",CV:1.8412,Rg:1.2198,Xg:1.8134},
+  {ds:"I90",n:"5%",CV:2.4328,Rg:1.2389,Xg:1.8752},
+  {ds:"I90",n:"10%",CV:3.3014,Rg:1.2834,Xg:1.9623},
+  {ds:"I90",n:"20%",CV:5.1092,Rg:1.4201,Xg:2.1814},
+];
+const FABL=[
+  {ds:"I294",g:"No velocity",d:1.4581},{ds:"I294",g:"No speed",d:1.5986},
+  {ds:"I294",g:"No acceleration",d:0.0438},{ds:"I294",g:"Kinematic only",d:0.0613},
+  {ds:"I294",g:"No jerk",d:0.0028},{ds:"I294",g:"No curvature",d:0.0003},{ds:"I294",g:"No turn rate",d:0.0001},
+  {ds:"I90",g:"No velocity",d:1.2689},{ds:"I90",g:"No speed",d:1.4002},
+  {ds:"I90",g:"No acceleration",d:0.0366},{ds:"I90",g:"Kinematic only",d:0.0349},
+  {ds:"I90",g:"No jerk",d:0.0},{ds:"I90",g:"No curvature",d:0.0},{ds:"I90",g:"No turn rate",d:0.0},
+];
+const XGBI=[
+  {ds:"I294",f:"speed_derived",v:8.4832},{ds:"I294",f:"vx_causal",v:0.9748},
+  {ds:"I294",f:"vy_causal",v:0.75},{ds:"I294",f:"acceleration_causal_0p5s",v:0.1791},
+  {ds:"I294",f:"acceleration_native",v:0.0371},{ds:"I294",f:"jerk_causal",v:0.0246},
+  {ds:"I294",f:"curvature_valid",v:0.0031},{ds:"I294",f:"turn_rate_valid",v:0.0014},
+  {ds:"I90",f:"speed_derived",v:5.0689},{ds:"I90",f:"vy_causal",v:2.3925},
+  {ds:"I90",f:"vx_causal",v:0.5099},{ds:"I90",f:"acceleration_causal_0p5s",v:0.285},
+  {ds:"I90",f:"acceleration_native",v:0.1569},{ds:"I90",f:"turn_rate_valid",v:0.011},
+  {ds:"I90",f:"curvature_valid",v:0.0},{ds:"I90",f:"jerk_causal",v:-0.0004},
+];
+const RCI=[
+  {ds:"I294",f:"speed_derived",v:0.2401},{ds:"I294",f:"vx_causal",v:0.1383},
+  {ds:"I294",f:"acceleration_causal_0p5s",v:0.1054},{ds:"I294",f:"acceleration_native",v:0.0992},
+  {ds:"I294",f:"vy_causal",v:0.0916},{ds:"I294",f:"jerk_causal",v:0.072},
+  {ds:"I294",f:"curvature_valid",v:0.061},{ds:"I294",f:"turn_rate_valid",v:0.0524},
+  {ds:"I90",f:"vy_causal",v:0.2984},{ds:"I90",f:"speed_derived",v:0.2541},
+  {ds:"I90",f:"vx_causal",v:0.1621},{ds:"I90",f:"acceleration_causal_0p5s",v:0.1032},
+  {ds:"I90",f:"acceleration_native",v:0.0892},{ds:"I90",f:"jerk_causal",v:0.0512},
+  {ds:"I90",f:"curvature_valid",v:0.0241},{ds:"I90",f:"turn_rate_valid",v:0.0177},
+];
+const LOFO=[
+  {ds:"I294",f:"speed_derived",v:1.5986},{ds:"I294",f:"vx_causal",v:0.9748},
+  {ds:"I294",f:"vy_causal",v:0.75},{ds:"I294",f:"acceleration_causal_0p5s",v:0.1791},
+  {ds:"I294",f:"acceleration_native",v:0.0371},{ds:"I294",f:"jerk_causal",v:0.0246},
+  {ds:"I294",f:"curvature_valid",v:0.0031},{ds:"I294",f:"turn_rate_valid",v:0.0014},
+  {ds:"I90",f:"speed_derived",v:1.4002},{ds:"I90",f:"vy_causal",v:2.3925},
+  {ds:"I90",f:"vx_causal",v:0.5099},{ds:"I90",f:"acceleration_causal_0p5s",v:0.285},
+  {ds:"I90",f:"acceleration_native",v:0.1569},{ds:"I90",f:"turn_rate_valid",v:0.011},
+  {ds:"I90",f:"curvature_valid",v:0.0},{ds:"I90",f:"jerk_causal",v:-0.0004},
+];
+const BOOT=[
+  {ds:"I294",m:"CV",FDE:2.2898,lo:2.1312,hi:2.4398},
+  {ds:"I294",m:"CA",FDE:2.7137,lo:2.4774,hi:2.9449},
+  {ds:"I294",m:"Ridge",FDE:1.5269,lo:1.4099,hi:1.6653},
+  {ds:"I294",m:"XGBoost",FDE:1.9788,lo:1.8532,hi:2.1389},
+  {ds:"I90",m:"CV",FDE:1.677,lo:1.5967,hi:1.7554},
+  {ds:"I90",m:"CA",FDE:1.5066,lo:1.4269,hi:1.5963},
+  {ds:"I90",m:"Ridge",FDE:1.2132,lo:1.1568,hi:1.2689},
+  {ds:"I90",m:"XGBoost",FDE:1.8013,lo:1.7388,hi:1.871},
+];
+const HOR=[
+  {ds:"I294",m:"CV",t:0.5,a:0.0539,d:0.107},{ds:"I294",m:"CV",t:1,a:0.1456,d:0.3377},
+  {ds:"I294",m:"CV",t:1.5,a:0.2731,d:0.6703},{ds:"I294",m:"CV",t:2,a:0.437,d:1.1143},
+  {ds:"I294",m:"CV",t:2.5,a:0.6357,d:1.6532},{ds:"I294",m:"CV",t:3,a:0.8677,d:2.2909},
+  {ds:"I294",m:"Ridge",t:0.5,a:0.0409,d:0.083},{ds:"I294",m:"Ridge",t:1,a:0.1104,d:0.2612},
+  {ds:"I294",m:"Ridge",t:1.5,a:0.2062,d:0.5147},{ds:"I294",m:"Ridge",t:2,a:0.3298,d:0.8563},
+  {ds:"I294",m:"Ridge",t:2.5,a:0.4693,d:1.2051},{ds:"I294",m:"Ridge",t:3,a:0.5781,d:1.5261},
+  {ds:"I294",m:"XGBoost",t:0.5,a:0.0624,d:0.1264},{ds:"I294",m:"XGBoost",t:1,a:0.1693,d:0.4022},
+  {ds:"I294",m:"XGBoost",t:1.5,a:0.3163,d:0.7836},{ds:"I294",m:"XGBoost",t:2,a:0.5028,d:1.2652},
+  {ds:"I294",m:"XGBoost",t:2.5,a:0.7007,d:1.7483},{ds:"I294",m:"XGBoost",t:3,a:0.8786,d:1.9809},
+  {ds:"I90",m:"CV",t:0.5,a:0.0382,d:0.0786},{ds:"I90",m:"CV",t:1,a:0.1034,d:0.2491},
+  {ds:"I90",m:"CV",t:1.5,a:0.2012,d:0.4983},{ds:"I90",m:"CV",t:2,a:0.3291,d:0.8214},
+  {ds:"I90",m:"CV",t:2.5,a:0.4807,d:1.2213},{ds:"I90",m:"CV",t:3,a:0.6451,d:1.677},
+  {ds:"I90",m:"Ridge",t:0.5,a:0.0291,d:0.0598},{ds:"I90",m:"Ridge",t:1,a:0.0803,d:0.192},
+  {ds:"I90",m:"Ridge",t:1.5,a:0.1523,d:0.3832},{ds:"I90",m:"Ridge",t:2,a:0.2434,d:0.618},
+  {ds:"I90",m:"Ridge",t:2.5,a:0.3411,d:0.8614},{ds:"I90",m:"Ridge",t:3,a:0.4336,d:1.2132},
+  {ds:"I90",m:"XGBoost",t:0.5,a:0.0534,d:0.108},{ds:"I90",m:"XGBoost",t:1,a:0.1443,d:0.3427},
+  {ds:"I90",m:"XGBoost",t:1.5,a:0.2803,d:0.6993},{ds:"I90",m:"XGBoost",t:2,a:0.4576,d:1.1571},
+  {ds:"I90",m:"XGBoost",t:2.5,a:0.6381,d:1.596},{ds:"I90",m:"XGBoost",t:3,a:0.803,d:1.8013},
+];
+
+// ── THEME ─────────────────────────────────────────────────────────────────────
+const L={paper_bgcolor:'transparent',plot_bgcolor:'transparent',
+  font:{family:"Inter,sans-serif",color:'#94a3b8',size:11},
+  margin:{t:20,r:20,b:45,l:65},
+  xaxis:{gridcolor:'rgba(30,45,66,.5)',zerolinecolor:'rgba(30,45,66,.8)',tickfont:{size:10}},
+  yaxis:{gridcolor:'rgba(30,45,66,.5)',zerolinecolor:'rgba(30,45,66,.8)',tickfont:{size:10}},
+  legend:{bgcolor:'rgba(17,24,39,.8)',bordercolor:'rgba(30,45,66,.8)',borderwidth:1,font:{size:10}},
+  hoverlabel:{bgcolor:'#1e2d42',font:{family:"Inter",size:11}}};
+const CFG={displayModeBar:false,responsive:true};
+const MC={'CV':'#94a3b8','CA':'#f59e0b','Ridge':'#3b82f6','Linear Regression':'#3b82f6',
+  'XGBoost':'#8b5cf6','MLP':'#ef4444','LSTM':'#06b6d4','GRU':'#ec4899','TCN':'#f97316','Transformer':'#a78bfa'};
+const mc=m=>MC[m]||'#64748b';
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let curDs='both', curHorDs='I294';
+const rendered=new Set(['overview']);
+
+function showSection(id,btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(!rendered.has(id)){rendered.add(id);renderSection(id);}
+}
+function renderSection(id){
+  if(id==='highway')  {renderHighway();}
+  if(id==='carla')    {renderCarla();}
+  if(id==='ablation') {renderAblation();}
+  if(id==='features') {renderFeatures();}
+  if(id==='horizon')  {renderHorizon();}
+}
+
+function setDataset(ds,btn){
+  curDs=ds;
+  document.querySelectorAll('.filter-btn').forEach(b=>{if(b.closest('#sec-highway'))b.classList.remove('on');});
+  btn.classList.add('on');
+  renderHighwayCharts();renderHwTable();
+}
+function setHorizonDs(ds,btn){
+  curHorDs=ds;
+  document.querySelectorAll('.filter-btn').forEach(b=>{if(b.closest('#sec-horizon'))b.classList.remove('on');});
+  btn.classList.add('on');
+  renderHorizonCharts();
+}
+
+// ── OVERVIEW ──────────────────────────────────────────────────────────────────
+function renderOverview(){
+  const ovModels=['KC-XGBoost','KC-Ridge','Unc. XGBoost','Unc. Ridge','CV Baseline','CA Baseline'];
+  const ovFDE=[1.5367,1.5425,1.5538,1.5602,2.2134,2.3027];
+  const ovCol=['#8b5cf6','#3b82f6','#a78bfa','#93c5fd','#94a3b8','#f59e0b'];
+  Plotly.newPlot('plot-ov-bar',[{type:'bar',x:ovModels,y:ovFDE,marker:{color:ovCol},
+    text:ovFDE.map(v=>v.toFixed(3)),textposition:'outside',
+    hovertemplate:'<b>%{x}</b><br>Mean FDE: %{y:.4f} m<extra></extra>'}],
+    {...L,yaxis:{...L.yaxis,title:'Mean Highway FDE (m)'}},CFG);
+
+  const scns=CARLA.map(r=>r.s);
+  const mds=['Ridge','XGBoost','CV','CA'];
+  const z=[CARLA.map(r=>r.R),CARLA.map(r=>r.X),CARLA.map(r=>r.C),CARLA.map(r=>r.A)];
+  Plotly.newPlot('plot-ov-heat',[{type:'heatmap',z,x:scns,y:mds,
+    colorscale:[[0,'#10b981'],[0.25,'#3b82f6'],[0.6,'#f59e0b'],[1,'#ef4444']],
+    text:z.map(row=>row.map(v=>v.toFixed(2))),texttemplate:'%{text}',
+    hovertemplate:'<b>%{y}</b> @ %{x}<br>FDE: %{z:.3f} m<extra></extra>'}],
+    {...L,margin:{t:20,r:20,b:80,l:80},xaxis:{...L.xaxis,tickangle:-30}},CFG);
+}
+
+// ── HIGHWAY ───────────────────────────────────────────────────────────────────
+function filterHW(){
+  if(curDs==='both') return HW;
+  return HW.filter(r=>r.ds===curDs);
+}
+function renderHighway(){renderHighwayCharts();renderHwTable();renderPareto();renderBootCI();}
+function renderHighwayCharts(){
+  const data=filterHW();
+  const dss=[...new Set(data.map(r=>r.ds))];
+  const fdeT=dss.map(ds=>{
+    const d=data.filter(r=>r.ds===ds);
+    return{type:'bar',name:ds==='I294'?'I-294 L2':'I-90/94',
+      x:d.map(r=>r.Model.replace('Constant Velocity','CV').replace('Constant Acceleration','CA').replace('Linear Regression','Ridge').replace('Random Forest','RF')),
+      y:d.map(r=>r.FDE),marker:{color:ds==='I294'?'#3b82f6':'#8b5cf6',opacity:.85},
+      hovertemplate:'<b>%{x}</b><br>FDE: %{y:.4f} m<extra>'+ds+'</extra>'};
+  });
+  Plotly.newPlot('plot-hw-fde',fdeT,{...L,barmode:'group',
+    yaxis:{...L.yaxis,title:'FDE (m)'},
+    xaxis:{...L.xaxis,tickangle:-30,tickfont:{size:9}},margin:{t:20,r:20,b:90,l:65}},CFG);
+  const adeT=dss.map(ds=>{
+    const d=data.filter(r=>r.ds===ds);
+    return{type:'bar',name:ds==='I294'?'I-294 L2':'I-90/94',
+      x:d.map(r=>r.Model.replace('Constant Velocity','CV').replace('Constant Acceleration','CA').replace('Linear Regression','Ridge').replace('Random Forest','RF')),
+      y:d.map(r=>r.ADE),marker:{color:ds==='I294'?'#10b981':'#06b6d4',opacity:.85},
+      hovertemplate:'<b>%{x}</b><br>ADE: %{y:.4f} m<extra>'+ds+'</extra>'};
+  });
+  Plotly.newPlot('plot-hw-ade',adeT,{...L,barmode:'group',
+    yaxis:{...L.yaxis,title:'ADE (m)'},
+    xaxis:{...L.xaxis,tickangle:-30,tickfont:{size:9}},margin:{t:20,r:20,b:90,l:65}},CFG);
+}
+function renderHwTable(){
+  const data=filterHW();
+  const bestFDE={I294:Math.min(...HW.filter(r=>r.ds==='I294').map(r=>r.FDE)),
+                 I90:Math.min(...HW.filter(r=>r.ds==='I90').map(r=>r.FDE))};
+  const cb=c=>c==='Physics'?'<span class="badge badge-amber">PHYSICS</span>':
+              c==='ML'?'<span class="badge badge-blue">ML</span>':'<span class="badge badge-purple">DL</span>';
+  let h=`<table><thead><tr><th>Dataset</th><th>Model</th><th>Cat</th><th>ADE</th><th>FDE</th><th>RMSE</th><th>Params</th><th>Lat(ms)</th><th>vs CV</th></tr></thead><tbody>`;
+  data.forEach(r=>{
+    const ib=r.FDE===bestFDE[r.ds];
+    const ds=r.ds==='I294'?'<span style="color:#60a5fa;font-size:10px">I-294</span>':'<span style="color:#c084fc;font-size:10px">I-90/94</span>';
+    const ic=r.Imp.startsWith('+')&&r.Imp!=='+0.00%'?'best':r.Imp.startsWith('-')?'worst':'neutral';
+    h+=`<tr><td>${ds}</td><td style="font-weight:${ib?700:400};color:${ib?'#10b981':'inherit'}">${r.Model}${ib?' &#9733;':''}</td>
+    <td>${cb(r.Cat)}</td><td>${r.ADE.toFixed(4)}</td><td class="${ib?'best':''}">${r.FDE.toFixed(4)}</td>
+    <td>${r.RMSE.toFixed(4)}</td><td style="font-family:'JetBrains Mono',monospace;font-size:11px">${r.Params.toLocaleString()}</td>
+    <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${r.Lat}</td>
+    <td class="${ic}" style="font-family:'JetBrains Mono',monospace;font-size:11px">${r.Imp}</td></tr>`;
+  });
+  h+='</tbody></table>';
+  document.getElementById('hw-table-wrap').innerHTML=h;
+}
+function renderPareto(){
+  const d=HW.filter(r=>r.Model!=='MLP');
+  Plotly.newPlot('plot-hw-pareto',[{type:'scatter',mode:'markers+text',
+    x:d.map(r=>r.Lat),y:d.map(r=>r.FDE),
+    text:d.map(r=>r.Model.replace('Constant Velocity','CV').replace('Constant Acceleration','CA').replace('Linear Regression','Ridge').replace('Random Forest','RF')),
+    textposition:'top center',textfont:{size:8},
+    marker:{color:d.map(r=>r.Cat==='Physics'?'#94a3b8':r.Cat==='ML'?'#3b82f6':'#8b5cf6'),
+      size:d.map(r=>r.ds==='I294'?10:7),symbol:d.map(r=>r.ds==='I294'?'circle':'diamond'),
+      line:{color:'rgba(255,255,255,.2)',width:1}},
+    hovertemplate:'<b>%{text}</b><br>Latency: %{x} ms<br>FDE: %{y:.4f} m<extra></extra>'}],
+    {...L,xaxis:{...L.xaxis,title:'Inference Latency (ms)',type:'log'},
+      yaxis:{...L.yaxis,title:'FDE (m)'}},CFG);
+}
+function renderBootCI(){
+  const mods=[...new Set(BOOT.map(r=>r.m))];
+  const colors={CV:'#94a3b8',CA:'#f59e0b',Ridge:'#3b82f6',XGBoost:'#8b5cf6'};
+  const tr=mods.map(m=>{
+    const d=BOOT.filter(r=>r.m===m);
+    return{type:'scatter',name:m,mode:'markers',
+      x:d.map(r=>r.ds==='I294'?'I-294':'I-90/94'),y:d.map(r=>r.FDE),
+      error_y:{type:'data',symmetric:false,array:d.map(r=>r.hi-r.FDE),arrayminus:d.map(r=>r.FDE-r.lo),
+        visible:true,thickness:2,width:6,color:colors[m]},
+      marker:{color:colors[m],size:10,line:{color:'rgba(255,255,255,.3)',width:1}},
+      hovertemplate:'<b>'+m+'</b><br>FDE: %{y:.4f} m<extra></extra>'};
+  });
+  Plotly.newPlot('plot-boot-ci',tr,{...L,yaxis:{...L.yaxis,title:'FDE 95% CI (m)'},
+    xaxis:{...L.xaxis,title:'Dataset'},margin:{...L.margin,b:60}},CFG);
+}
+
+// ── CARLA ─────────────────────────────────────────────────────────────────────
+function renderCarla(){
+  const mods=['Ridge','XGBoost','CV','CA'];
+  const keys=['R','X','C','A'];
+  const cols=['#3b82f6','#8b5cf6','#94a3b8','#f59e0b'];
+  const tr=mods.map((m,i)=>({type:'bar',name:m,
+    x:CARLA.map(r=>r.s),y:CARLA.map(r=>r[keys[i]]),
+    marker:{color:cols[i],opacity:.85},
+    hovertemplate:'<b>'+m+'</b><br>FDE: %{y:.4f} m<extra></extra>'}));
+  Plotly.newPlot('plot-carla-bar',tr,{...L,barmode:'group',
+    yaxis:{...L.yaxis,title:'FDE (m)'},
+    xaxis:{...L.xaxis,tickangle:-20,tickfont:{size:9}},margin:{t:20,r:20,b:90,l:65}},CFG);
+
+  Plotly.newPlot('plot-carla-latency',[
+    {type:'bar',name:'Latency (ms)',x:CARLA.map(r=>r.s),y:CARLA.map(r=>r.lat),
+     marker:{color:'#3b82f6',opacity:.8},
+     hovertemplate:'<b>%{x}</b><br>Latency: %{y:.3f} ms<extra></extra>'},
+    {type:'scatter',name:'FPS',x:CARLA.map(r=>r.s),y:CARLA.map(r=>r.fps),
+     mode:'lines+markers',marker:{color:'#10b981',size:8},yaxis:'y2',
+     hovertemplate:'<b>%{x}</b><br>FPS: %{y:.0f}<extra></extra>'}
+  ],{...L,yaxis:{...L.yaxis,title:'Latency (ms)'},
+    yaxis2:{title:'Effective FPS',overlaying:'y',side:'right',gridcolor:'transparent',
+      tickfont:{size:10},titlefont:{color:'#10b981'}},
+    xaxis:{...L.xaxis,tickangle:-20,tickfont:{size:9}},margin:{t:20,r:85,b:90,l:65}},CFG);
+
+  // Scenario cards — winner from FDE minimum
+  const winner=r=>{
+    const v={Ridge:r.R,XGBoost:r.X,CV:r.C,CA:r.A};
+    const mn=Math.min(...Object.values(v));
+    const ws=Object.keys(v).filter(k=>v[k]===mn);
+    return ws.length>1?'TIE: '+ws.join(' & '):ws[0];
+  };
+  const wbadge={Ridge:'badge-blue',XGBoost:'badge-purple',CV:'badge-amber',CA:'badge-green'};
+  const rrows=[{m:'Ridge',k:'R',c:'#3b82f6'},{m:'XGBoost',k:'X',c:'#8b5cf6'},{m:'CV',k:'C',c:'#94a3b8'},{m:'CA',k:'A',c:'#f59e0b'}];
+  let html='';
+  CARLA.forEach(r=>{
+    const w=winner(r);
+    const mx=Math.max(r.R,r.X,r.C||0.001,r.A||0.001)||1;
+    const wFirst=w.split(':')[0].trim().split(' ')[0];
+    const cls=wbadge[wFirst]||'badge-blue';
+    const minFDE=Math.min(r.R,r.X,r.C,r.A);
+    html+=`<div class="scen-card"><div class="scen-name">${r.s}</div><div class="scen-desc">${r.d}</div>`;
+    rrows.forEach(({m,k,c})=>{
+      const v=r[k]; const wp=Math.max(2,(v/(mx||1))*100);
+      html+=`<div class="scen-row"><span class="scen-model">${m}</span>
+        <div class="scen-bar-wrap"><div class="scen-bar" style="width:${wp}%;background:${c}"></div></div>
+        <span class="scen-fde" style="color:${c}">${v.toFixed(3)}</span></div>`;
+    });
+    html+=`<div class="scen-winner"><span>&#127942; Winner:</span><span class="badge ${cls}">${w}</span>
+      <span style="color:var(--text3);font-size:10px">FDE=${minFDE.toFixed(3)} m</span></div></div>`;
+  });
+  document.getElementById('scenario-grid').innerHTML=html;
+}
+
+// ── ABLATION ─────────────────────────────────────────────────────────────────
+function renderAblation(){
+  // History ablation
+  const haT=['I294','I90'].flatMap(ds=>{
+    const d=HIST.filter(r=>r.ds===ds);
+    const lbl=ds==='I294'?'I-294':'I-90/94';
+    return[
+      {type:'scatter',name:'Ridge ('+lbl+')',mode:'lines+markers',x:d.map(r=>r.h),y:d.map(r=>r.Rg),
+       line:{color:ds==='I294'?'#3b82f6':'#93c5fd',dash:ds==='I294'?'solid':'dash'},marker:{size:7},
+       hovertemplate:'Ridge '+lbl+' %{x}: %{y:.4f} m<extra></extra>'},
+      {type:'scatter',name:'XGBoost ('+lbl+')',mode:'lines+markers',x:d.map(r=>r.h),y:d.map(r=>r.Xg),
+       line:{color:ds==='I294'?'#8b5cf6':'#c4b5fd',dash:ds==='I294'?'solid':'dash'},marker:{size:7},
+       hovertemplate:'XGBoost '+lbl+' %{x}: %{y:.4f} m<extra></extra>'}
+    ];
+  });
+  Plotly.newPlot('plot-hist-abl',haT,{...L,
+    xaxis:{...L.xaxis,title:'History Length'},yaxis:{...L.yaxis,title:'FDE (m)'}},CFG);
+
+  // Noise
+  const noiseModels=['CV','Ridge','XGBoost'];
+  const noiseKeys=['CV','Rg','Xg'];
+  const noiseCols=['#94a3b8','#3b82f6','#8b5cf6'];
+  const nd=NOISE.filter(r=>r.ds==='I294');
+  const ns=[...new Set(nd.map(r=>r.n))];
+  const nT=noiseModels.map((m,i)=>({type:'scatter',name:m,mode:'lines+markers',
+    x:ns,y:ns.map(n=>{const rw=nd.find(r=>r.n===n);return rw?rw[noiseKeys[i]]:null;}),
+    line:{color:noiseCols[i]},marker:{size:7},
+    hovertemplate:'<b>'+m+'</b> @ %{x} noise<br>FDE: %{y:.4f} m<extra></extra>'}));
+  Plotly.newPlot('plot-noise',nT,{...L,
+    xaxis:{...L.xaxis,title:'Noise Level (I-294)'},yaxis:{...L.yaxis,title:'FDE (m)'}},CFG);
+
+  renderFeatureAblation();
+}
+function renderFeatureAblation(){
+  const ds=document.getElementById('abl-ds-sel').value;
+  const d=FABL.filter(r=>r.ds===ds).sort((a,b)=>b.d-a.d);
+  Plotly.newPlot('plot-feat-abl',[{type:'bar',orientation:'h',
+    y:d.map(r=>r.g),x:d.map(r=>r.d),
+    marker:{color:d.map(r=>r.d>0.5?'#ef4444':r.d>0.05?'#f59e0b':'#10b981'),opacity:.85},
+    hovertemplate:'<b>%{y}</b><br>FDE increase: %{x:.4f} m<extra></extra>'}],
+    {...L,xaxis:{...L.xaxis,title:'FDE Increase when Feature Group Removed (m)'},
+      yaxis:{...L.yaxis,autorange:'reversed'},margin:{t:20,r:20,b:50,l:150}},CFG);
+}
+
+// ── FEATURES ─────────────────────────────────────────────────────────────────
+function renderFeatures(){
+  ['I294','I90'].forEach(ds=>{
+    const d=XGBI.filter(r=>r.ds===ds).sort((a,b)=>b.v-a.v);
+    Plotly.newPlot('plot-xgb-'+ds.toLowerCase(),[{type:'bar',orientation:'h',
+      y:d.map(r=>r.f),x:d.map(r=>r.v),marker:{color:'#8b5cf6',opacity:.8},
+      hovertemplate:'<b>%{y}</b><br>FDE increase: %{x:.4f} m<extra></extra>'}],
+      {...L,xaxis:{...L.xaxis,title:'Permutation FDE Increase (m)'},
+        yaxis:{...L.yaxis,autorange:'reversed'},margin:{t:20,r:20,b:50,l:200}},CFG);
+    const r=RCI.filter(r=>r.ds===ds).sort((a,b)=>b.v-a.v);
+    Plotly.newPlot('plot-ridge-'+ds.toLowerCase(),[{type:'bar',orientation:'h',
+      y:r.map(r=>r.f),x:r.map(r=>r.v),marker:{color:'#3b82f6',opacity:.8},
+      hovertemplate:'<b>%{y}</b><br>Normalized weight: %{x:.4f}<extra></extra>'}],
+      {...L,xaxis:{...L.xaxis,title:'Normalized Influence'},
+        yaxis:{...L.yaxis,autorange:'reversed'},margin:{t:20,r:20,b:50,l:200}},CFG);
+  });
+  const l294=LOFO.filter(r=>r.ds==='I294').sort((a,b)=>b.v-a.v);
+  const l90=LOFO.filter(r=>r.ds==='I90').sort((a,b)=>b.v-a.v);
+  Plotly.newPlot('plot-lofo',[
+    {type:'bar',name:'I-294',orientation:'h',y:l294.map(r=>r.f),x:l294.map(r=>r.v),
+     marker:{color:'#3b82f6',opacity:.8},hovertemplate:'I-294 <b>%{y}</b>: %{x:.4f} m<extra></extra>'},
+    {type:'bar',name:'I-90/94',orientation:'h',y:l90.map(r=>r.f),x:l90.map(r=>r.v),
+     marker:{color:'#8b5cf6',opacity:.8},hovertemplate:'I-90 <b>%{y}</b>: %{x:.4f} m<extra></extra>'}
+  ],{...L,barmode:'group',xaxis:{...L.xaxis,title:'FDE Increase when Feature Removed (m)'},
+    yaxis:{...L.yaxis,autorange:'reversed'},margin:{t:20,r:20,b:50,l:200}},CFG);
+}
+
+// ── HORIZON ───────────────────────────────────────────────────────────────────
+function renderHorizon(){renderHorizonCharts();}
+function renderHorizonCharts(){
+  const d=HOR.filter(r=>r.ds===curHorDs);
+  const mods=[...new Set(d.map(r=>r.m))];
+  const colors={CV:'#94a3b8',Ridge:'#3b82f6',XGBoost:'#8b5cf6'};
+  const aT=mods.map(m=>({type:'scatter',name:m,mode:'lines+markers',
+    x:d.filter(r=>r.m===m).map(r=>r.t),y:d.filter(r=>r.m===m).map(r=>r.a),
+    line:{color:colors[m]},marker:{size:7},
+    hovertemplate:'<b>'+m+'</b> t=%{x}s ADE: %{y:.4f} m<extra></extra>'}));
+  Plotly.newPlot('plot-horizon',aT,{...L,
+    xaxis:{...L.xaxis,title:'Prediction Horizon (s)'},yaxis:{...L.yaxis,title:'Cumulative ADE (m)'}},CFG);
+  const dT=mods.map(m=>({type:'scatter',name:m,mode:'lines+markers',
+    x:d.filter(r=>r.m===m).map(r=>r.t),y:d.filter(r=>r.m===m).map(r=>r.d),
+    line:{color:colors[m]},marker:{size:7},
+    hovertemplate:'<b>'+m+'</b> t=%{x}s Disp: %{y:.4f} m<extra></extra>'}));
+  Plotly.newPlot('plot-horizon-disp',dT,{...L,
+    xaxis:{...L.xaxis,title:'Prediction Horizon (s)'},yaxis:{...L.yaxis,title:'Displacement Error (m)'}},CFG);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+window.addEventListener('load',()=>{renderOverview();});
+</script>
+</body>
+</html>

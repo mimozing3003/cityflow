@@ -1,0 +1,52 @@
+==============================================================================
+TRAJPILOT CITYFLOW | STEP 14 LIVE CARLA PREDICTION DEMONSTRATION REPORT
+==============================================================================
+
+1. EXECUTIVE SUMMARY & DEMONSTRATION SCOPE
+------------------------------------------------------------------------------
+Demonstration Status  : SUCCESS (End-to-End Live CARLA Forecasting)
+Classification        : Single-run demonstration (not a general benchmark)
+Execution Timestamp   : 2026-10-27T22:02:40.459026
+CARLA Server Version  : 0.9.16 (Host: 127.0.0.1:2000)
+CARLA Map             : Carla/Maps/Town10HD_Opt | Road 12, Lane 1
+Traffic Manager Port  : 2002 (Synchronous 10 Hz mode)
+
+2. FROZEN MODEL & NORMALIZATION PIPELINE
+------------------------------------------------------------------------------
+Model Checkpoint      : C:\Users\SOMUJIT\Desktop\cityflow\data\models\gru_baseline\best_gru_baseline.pt
+Total Parameters      : 227,132 (Strict load: PASS)
+Feature Normalizer    : C:\Users\SOMUJIT\Desktop\cityflow\data\processed\i24_sequences\gru_inputs\train_normalization_statistics.csv (Untouched I-24 stats)
+Input Feature Count   : 16 causal features (Ego kinematics + Car-following)
+Model Channel Count   : 32 channels (16 normalized + 16 missingness indicator bits)
+Output Representation : (30, 2) ego-aligned displacements (meters) @ 10 Hz
+
+3. LIVE SIMULATION EXECUTION & SAFETY
+------------------------------------------------------------------------------
+Ego Spawn Location    : (-15.15, 69.73) m
+Lead Spawn Location   : (4.85, 69.75) m (Gap: 20.0 m)
+Prediction Origin t0  : Step 29 (Sim Time: 212.34 s)
+Ego Position at t0    : (-0.313, 69.748) m
+Observed Horizon      : 30 steps (3.0 seconds post-prediction ground truth)
+Lane Alignment Check  : Both vehicles remained on Road 12, Lane 1 (No junction)
+Visual Rendering      : Predicted (Cyan) and Ground Truth (Orange) paths drawn in CARLA
+
+4. SINGLE-RUN FORECASTING EVALUATION
+------------------------------------------------------------------------------
+ADE @ 1.0s (10 steps) : 2.4685 m
+FDE @ 1.0s (10 steps) : 4.3229 m
+ADE @ 2.0s (20 steps) : 5.0398 m
+FDE @ 2.0s (20 steps) : 9.8318 m
+ADE @ 3.0s (30 steps) : 7.4798 m
+FDE @ 3.0s (30 steps) : 14.3650 m
+
+Predicted Longitudinal Travel (3s)  : 24.8820 m
+Actual Observed Longitudinal Travel : 10.5176 m
+Predicted Lateral Travel (3s)       : 0.1210 m
+Actual Observed Lateral Travel      : -0.0010 m
+
+5. ARTIFACTS SAVED
+------------------------------------------------------------------------------
+Predictions CSV : C:\Users\SOMUJIT\Desktop\cityflow\curla demostrate\step14_live_predictions.csv
+Summary JSON    : C:\Users\SOMUJIT\Desktop\cityflow\curla demostrate\step14_live_demo_summary.json
+Report TXT      : C:\Users\SOMUJIT\Desktop\cityflow\curla demostrate\step14_live_demo_report.txt
+==============================================================================

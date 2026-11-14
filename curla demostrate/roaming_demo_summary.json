@@ -1,0 +1,9 @@
+{
+  "timestamp": "2026-10-27T22:17:27.003927",
+  "map": "Carla/Maps/Town10HD_Opt",
+  "total_ticks": 10000,
+  "total_distance_traveled_m": 3898.8,
+  "mean_gru_latency_ms": 3.162,
+  "npcs_spawned": 30,
+  "status": "PASS_FULL_CITY_ROAMING"
+}

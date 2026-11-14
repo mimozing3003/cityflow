@@ -1,0 +1,600 @@
+56N | EXACT CARLA + MODEL INTERFACE EVIDENCE
+========================================================================================================================
+
+CHECKPOINT CONFIGURATION
+{
+  "input_dim": 32,
+  "hidden_dim": 128,
+  "num_layers": 2,
+  "future_steps": 30,
+  "target_dim": 2,
+  "dropout": 0.1
+}
+
+CARLA EXECUTABLES
+C:\Users\SOMUJIT\Desktop\AUTONOMUS CAR  SIMULATION\softwere\CARLA_0.9.16\CarlaUE4.exe
+
+MODEL CODE EVIDENCE
+
+########################################################################################################################
+CELL 238
+MATCHES: ['input_projection', 'input_dim', 'torch\\.cat', 'concatenate', 'FEATURES', '32', '16']
+########################################################################################################################
+from pathlib import Path
+import json
+import re
+
+ROOT = Path(".")
+
+search_files = [
+    Path("TrajPilot_Research_Master.ipynb"),
+    Path("data") / "manifests" / "i24_56C_exact_gru_configuration.json",
+    Path("data") / "manifests" / "i24_54J_frozen_research_status.json"
+]
+
+patterns = [
+    "input_dim",
+    "32",
+    "16",
+    "input_projection",
+    "vx_causal",
+    "Y_ego_aligned",
+    "FEATURES",
+    "torch.cat",
+    "concatenate",
+    "feature"
+]
+
+print("=" * 76)
+print("TRAJPILOT CITYFLOW | 56D INPUT CONSTRUCTION FORENSIC AUDIT")
+print("=" * 76)
+
+found = []
+
+for path in search_files:
+
+    if not path.exists():
+        print(f"\nMISSING: {path}")
+        continue
+
+    print(f"\nFILE: {path}")
+    print("-" * 76)
+
+    text = path.read_text(
+        encoding="utf-8",
+        errors="ignore"
+    )
+
+    lines = text.splitlines()
+
+    for line_number, line in enumerate(lines, start=1):
+
+        if any(
+            pattern.lower() in line.lower()
+            for pattern in patterns
+        ):
+
+            found.append({
+                "file": str(path),
+                "line": line_number,
+                "text": line[:500]
+            })
+
+            print(
+                f"{line_number:>6}: "
+                f"{line[:500]}"
+            )
+
+print("\n" + "=" * 76)
+print("FORENSIC SUMMARY")
+print("=" * 76)
+
+print("Matching records:", len(found))
+
+assert len(found) > 0
+
+summary_path = (
+    Path("data")
+    / "manifests"
+    / "i24_56D_input_construction_forensic.txt"
+)
+
+with open(
+    summary_path,
+    "w",
+    encoding="utf-8"
+) as f:
+
+    f.write(
+        "TRAJPILOT CITYFLOW | 56D INPUT CONSTRUCTION FORENSIC AUDIT\n"
+    )
+    f.write("=" * 76 + "\n\n")
+
+    for record in found:
+
+        f.write(
+            f"{record['file']}:{record['line']}\n"
+        )
+        f.write(
+            record["text"] + "\n\n"
+        )
+
+print("\nARTIFACT SAVED")
+print("-" * 76)
+print(summary_path)
+
+print("\n" + "=" * 76)
+print("56D RESULT: PASS")
+print("=" * 76)
+print("Existing project artifacts searched.")
+print("No model retrained.")
+print("No tensor modified.")
+print("No new feature transformation assumed.")
+
+########################################################################################################################
+CELL 241
+MATCHES: ['input_projection', 'input_dim', 'concatenate', 'FEATURES', '32', '16']
+########################################################################################################################
+from pathlib import Path
+import re
+
+ROOT = Path(r"C:\Users\SOMUJIT\Desktop\cityflow")
+FORENSIC = ROOT / "data" / "manifests" / "i24_56D_input_construction_forensic.txt"
+
+text = FORENSIC.read_text(encoding="utf-8", errors="ignore")
+
+patterns = [
+    r"input_dim\s*[:=]\s*32",
+    r"input_dim.*32",
+    r"16.*32",
+    r"32.*16",
+    r"torch\.cat",
+    r"torch\.concatenate",
+    r"np\.concatenate",
+    r"input_projection",
+    r"projection",
+    r"Linear\(.*32",
+    r"Linear\(16",
+    r"cat\(",
+    r"concatenate\(",
+    r"torch\.stack",
+    r"FEATURES\s*=",
+    r"feature_names",
+    r"feature.*32",
+    r"32.*feature"
+]
+
+matches = []
+
+for pattern in patterns:
+    for match in re.finditer(pattern, text, re.IGNORECASE):
+        start = max(0, match.start() - 1200)
+        end = min(len(text), match.end() + 1800)
+        block = text[start:end]
+        matches.append((match.start(), pattern, block))
+
+matches.sort(key=lambda x: x[0])
+
+unique = []
+seen = set()
+
+for _, pattern, block in matches:
+    normalized = re.sub(r"\s+", " ", block).strip()
+
+    if normalized not in seen:
+        seen.add(normalized)
+        unique.append((pattern, block))
+
+print("56E | 16 → 32 INPUT CONSTRUCTION EVIDENCE")
+print("=" * 80)
+print(f"Forensic file size : {len(text):,} characters")
+print(f"Evidence blocks    : {len(unique)}")
+
+for i, (pattern, block) in enumerate(unique[:30], 1):
+    print(f"\n{'#' * 80}")
+    print(f"EVIDENCE BLOCK {i}")
+    print(f"TRIGGER: {pattern}")
+    print(f"{'#' * 80}")
+    print(block)
+
+print("\n56E RESULT: EXTRACTION COMPLETE")
+
+########################################################################################################################
+CELL 242
+MATCHES: ['input_projection', 'input_dim', 'concatenate', 'FEATURES', 'X_train', 'X_validation', 'X_test', 'X_unseen_stress', '32']
+########################################################################################################################
+from pathlib import Path
+import json
+import re
+
+ROOT = Path(r"C:\Users\SOMUJIT\Desktop\cityflow")
+NOTEBOOK = ROOT / "TrajPilot_Research_Master.ipynb"
+OUT = ROOT / "data" / "manifests" / "i24_56F_exact_input_construction.txt"
+
+nb = json.loads(NOTEBOOK.read_text(encoding="utf-8"))
+
+patterns = [
+    r"input_dim",
+    r"hidden_dim",
+    r"GRU\(",
+    r"nn\.GRU",
+    r"Linear\(",
+    r"nn\.Linear",
+    r"torch\.cat",
+    r"torch\.concat",
+    r"torch\.stack",
+    r"np\.concatenate",
+    r"concatenate",
+    r"input_projection",
+    r"projection",
+    r"feature",
+    r"FEATURES",
+    r"X_train",
+    r"X_validation",
+    r"X_test",
+    r"X_unseen_stress",
+    r"32"
+]
+
+hits = []
+
+for cell_index, cell in enumerate(nb.get("cells", [])):
+    if cell.get("cell_type") != "code":
+        continue
+
+    source = "".join(cell.get("source", []))
+
+    if not source.strip():
+        continue
+
+    matched = [
+        pattern for pattern in patterns
+        if re.search(pattern, source, re.IGNORECASE)
+    ]
+
+    if matched:
+        hits.append(
+            {
+                "cell_index": cell_index,
+                "matched": matched,
+                "source": source
+            }
+        )
+
+with OUT.open("w", encoding="utf-8") as f:
+    f.write("56F | EXACT NOTEBOOK CODE SEARCH\n")
+    f.write("=" * 100 + "\n")
+    f.write(f"Notebook: {NOTEBOOK}\n")
+    f.write(f"Matching code cells: {len(hits)}\n")
+
+    for item in hits:
+        f.write("\n" + "#" * 100 + "\n")
+        f.write(f"CELL INDEX: {item['cell_index']}\n")
+        f.write(f"MATCHES: {item['matched']}\n")
+        f.write("#" * 100 + "\n")
+        f.write(item["source"])
+        f.write("\n")
+
+print("56F | EXACT NOTEBOOK CODE SEARCH")
+print("=" * 70)
+print(f"Notebook exists       : {NOTEBOOK.exists()}")
+print(f"Matching code cells   : {len(hits)}")
+print(f"Output saved           : {OUT}")
+print(f"Output size            : {OUT.stat().st_size:,} bytes")
+
+print("\nMatching cell indices:")
+print([x["cell_index"] for x in hits])
+
+print("\n56F RESULT: COMPLETE")
+
+########################################################################################################################
+CELL 243
+MATCHES: ['input_dim', 'concatenate', 'FEATURES', 'X_train', 'X_validation', 'X_test', 'X_unseen_stress', '32']
+########################################################################################################################
+from pathlib import Path
+import json
+import re
+
+ROOT = Path(r"C:\Users\SOMUJIT\Desktop\cityflow")
+NOTEBOOK = ROOT / "TrajPilot_Research_Master.ipynb"
+OUT = ROOT / "data" / "manifests" / "i24_56G_gru_input_construction_audit.txt"
+
+nb = json.loads(NOTEBOOK.read_text(encoding="utf-8"))
+
+priority_patterns = [
+    r"class\s+\w*GRU\w*",
+    r"class\s+\w*Model\w*",
+    r"nn\.GRU",
+    r"GRU\(",
+    r"nn\.Linear",
+    r"Linear\(",
+    r"input_dim\s*=",
+    r"hidden_dim\s*=",
+    r"input_size\s*=",
+    r"torch\.cat",
+    r"torch\.concat",
+    r"torch\.stack",
+    r"np\.concatenate",
+    r"concatenate",
+    r"X_train",
+    r"X_validation",
+    r"X_test",
+    r"X_unseen_stress",
+    r"torch\.load",
+    r"load_state_dict",
+    r"best_gru_baseline",
+    r"features",
+    r"FEATURES",
+    r"feature_names",
+    r"shape",
+    r"32"
+]
+
+secondary_patterns = [
+    r"forward\s*\(",
+    r"self\.",
+    r"dataset",
+    r"DataLoader",
+    r"TensorDataset",
+    r"batch",
+    r"prediction",
+    r"target"
+]
+
+hits = []
+
+for cell_index, cell in enumerate(nb.get("cells", [])):
+    if cell.get("cell_type") != "code":
+        continue
+
+    source = "".join(cell.get("source", []))
+
+    if not source.strip():
+        continue
+
+    primary = [
+        pattern for pattern in priority_patterns
+        if re.search(pattern, source, re.IGNORECASE)
+    ]
+
+    secondary = [
+        pattern for pattern in secondary_patterns
+        if re.search(pattern, source, re.IGNORECASE)
+    ]
+
+    if primary:
+        score = len(primary) * 3 + len(secondary)
+
+        hits.append(
+            {
+                "cell_index": cell_index,
+                "score": score,
+                "primary": primary,
+                "secondary": secondary,
+                "source": source
+            }
+        )
+
+hits = sorted(
+    hits,
+    key=lambda x: (-x["score"], x["cell_index"])
+)
+
+with OUT.open("w", encoding="utf-8") as f:
+    f.write("56G | EXACT GRU INPUT CONSTRUCTION AUDIT\n")
+    f.write("=" * 110 + "\n")
+    f.write(f"Notebook: {NOTEBOOK}\n")
+    f.write(f"Candidate code cells: {len(hits)}\n")
+
+    for rank, item in enumerate(hits, start=1):
+        f.write("\n" + "#" * 110 + "\n")
+        f.write(f"RANK: {rank}\n")
+        f.write(f"CELL INDEX: {item['cell_index']}\n")
+        f.write(f"SCORE: {item['score']}\n")
+        f.write(f"PRIMARY MATCHES: {item['primary']}\n")
+        f.write(f"SECONDARY MATCHES: {item['secondary']}\n")
+        f.write("#" * 110 + "\n")
+        f.write(item["source"])
+        f.write("\n")
+
+print("56G | EXACT GRU INPUT CONSTRUCTION AUDIT")
+print("=" * 70)
+print(f"Notebook exists        : {NOTEBOOK.exists()}")
+print(f"Candidate code cells   : {len(hits)}")
+print(f"Output saved            : {OUT}")
+print(f"Output size             : {OUT.stat().st_size:,} bytes")
+
+print("\nTop candidate cells:")
+for item in hits[:20]:
+    print(
+        f"Cell {item['cell_index']:>3} | "
+        f"score={item['score']:>3} | "
+        f"primary={len(item['primary']):>2} | "
+        f"secondary={len(item['secondary']):>2}"
+    )
+
+print("\n56G RESULT: TARGETED FORENSIC AUDIT COMPLETE")
+
+########################################################################################################################
+CELL 244
+MATCHES: ['input_projection', 'input_dim', 'concatenate', 'FEATURES', '32', '16']
+########################################################################################################################
+from pathlib import Path
+import json
+import re
+import torch
+
+ROOT = Path(r"C:\Users\SOMUJIT\Desktop\cityflow")
+NOTEBOOK = ROOT / "TrajPilot_Research_Master.ipynb"
+CHECKPOINT = ROOT / "data" / "models" / "gru_baseline" / "best_gru_baseline.pt"
+OUT = ROOT / "data" / "manifests" / "i24_56H_gru_architecture_forensic.txt"
+
+nb = json.loads(NOTEBOOK.read_text(encoding="utf-8"))
+
+target_cells = [198, 200, 202, 204, 238, 241]
+
+cell_sources = {}
+
+for cell_index in target_cells:
+    if cell_index < len(nb.get("cells", [])):
+        cell = nb["cells"][cell_index]
+        cell_sources[cell_index] = "".join(cell.get("source", []))
+
+patterns = [
+    r"input_dim",
+    r"input_size",
+    r"hidden_dim",
+    r"nn\.GRU",
+    r"GRU\(",
+    r"nn\.Linear",
+    r"Linear\(",
+    r"torch\.cat",
+    r"torch\.concat",
+    r"torch\.stack",
+    r"np\.concatenate",
+    r"concatenate",
+    r"torch\.reshape",
+    r"\.reshape\(",
+    r"\.view\(",
+    r"16",
+    r"32",
+    r"FEATURES",
+    r"feature_names",
+    r"input_projection",
+    r"projection",
+    r"forward",
+    r"load_state_dict",
+    r"best_gru_baseline"
+]
+
+evidence = {}
+
+for cell_index, source in cell_sources.items():
+    matched = [
+        pattern
+        for pattern in patterns
+        if re.search(pattern, source, re.IGNORECASE)
+    ]
+    evidence[cell_index] = matched
+
+checkpoint = torch.load(
+    CHECKPOINT,
+    map_location="cpu",
+    weights_only=False
+)
+
+if isinstance(checkpoint, dict):
+    checkpoint_keys = list(checkpoint.keys())
+else:
+    checkpoint_keys = []
+
+state_dict = None
+
+if isinstance(checkpoint, dict):
+    if isinstance(checkpoint.get("model_state_dict"), dict):
+        state_dict = checkpoint["model_state_dict"]
+    elif isinstance(checkpoint.get("state_dict"), dict):
+        state_dict = checkpoint["state_dict"]
+    elif all(torch.is_tensor(v) for v in checkpoint.values()):
+        state_dict = checkpoint
+
+state_shapes = {}
+
+if state_dict is not None:
+    for key, value in state_dict.items():
+        if torch.is_tensor(value):
+            state_shapes[key] = tuple(value.shape)
+
+input_candidates = {
+    key: shape
+    for key, shape in state_shapes.items()
+    if any(
+        token in key.lower()
+        for token in [
+            "weight_ih",
+            "input",
+            "projection",
+            "linear"
+        ]
+    )
+}
+
+gru_candidates = {
+    key: shape
+    for key, shape in state_shapes.items()
+    if "weight_ih" in key.lower() or "weight_hh" in key.lower()
+}
+
+linear_candidates = {
+    key: shape
+    for key, shape in state_shapes.items()
+    if "linear" in key.lower() or "projection" in key.lower()
+}
+
+with OUT.open("w", encoding="utf-8") as f:
+    f.write("56H | GRU ARCHITECTURE FORENSIC RECONSTRUCTION\n")
+    f.write("=" * 120 + "\n\n")
+
+    f.write("TARGET CELLS\n")
+    f.write(str(target_cells))
+    f.write("\n\n")
+
+    for cell_index in target_cells:
+        f.write("\n" + "#" * 120 + "\n")
+        f.write(f"CELL {cell_index}\n")
+        f.write("#" * 120 + "\n")
+        f.write(f"MATCHES: {evidence.get(cell_index, [])}\n\n")
+        f.write(cell_sources.get(cell_index, "CELL NOT FOUND"))
+        f.write("\n")
+
+    f.write("\n" + "=" * 120 + "\n")
+    f.write("CHECKPOINT FORENSICS\n")
+    f.write("=" * 120 + "\n")
+    f.write(f"Checkpoint: {CHECKPOINT}\n")
+    f.write(f"Checkpoint exists: {CHECKPOINT.exists()}\n")
+    f.write(f"Checkpoint type: {type(checkpoint).__name__}\n")
+    f.write(f"Checkpoint keys: {checkpoint_keys}\n")
+
+    f.write("\nSTATE DICTIONARY SHAPES\n")
+    for key, shape in state_shapes.items():
+        f.write(f"{key}: {shape}\n")
+
+    f.write("\nINPUT-RELATED PARAMETERS\n")
+    for key, shape in input_candidates.items():
+        f.write(f"{key}: {shape}\n")
+
+    f.write("\nGRU PARAMETER CANDIDATES\n")
+    for key, shape in gru_candidates.items():
+        f.write(f"{key}: {shape}\n")
+
+    f.write("\nLINEAR / PROJECTION PARAMETER CANDIDATES\n")
+    for key, shape in linear_candidates.items():
+        f.write(f"{key}: {shape}\n")
+
+print("56H | GRU ARCHITECTURE FORENSIC RECONSTRUCTION")
+print("=" * 75)
+print(f"Notebook exists        : {NOTEBOOK.exists()}")
+print(f"Checkpoint exists      : {CHECKPOINT.exists()}")
+print(f"Checkpoint keys        : {checkpoint_keys}")
+print(f"State-dict parameters  : {len(state_shapes)}")
+
+print("\nTarget cells:")
+for cell_index in target_cells:
+    print(
+        f"Cell {cell_index}: "
+        f"{len(cell_sources.get(cell_index, '')):,} chars | "
+        f"matches={evidence.get(cell_index, [])}"
+    )
+
+print("\nGRU parameter candidates:")
+for key, shape in gru_candidates.items():
+    print(f"  {key}: {shape}")
+
+print("\nLinear / projection candidates:")
+for key, shape in linear_candidates.items():
+    print(f"  {key}: {shape}")
+
+print(f"\nForensic report saved:")
+print(OUT)
+
+print("\n56H RESULT: COMPLETE")

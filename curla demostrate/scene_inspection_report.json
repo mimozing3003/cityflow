@@ -1,0 +1,121 @@
+{
+  "server_version": "0.9.16",
+  "map": "Carla/Maps/Town10HD_Opt",
+  "spawn_point_count": 155,
+  "vehicle_blueprint_count": 41,
+  "vehicle_blueprints": [
+    "vehicle.audi.a2",
+    "vehicle.audi.etron",
+    "vehicle.audi.tt",
+    "vehicle.bh.crossbike",
+    "vehicle.bmw.grandtourer",
+    "vehicle.carlamotors.carlacola",
+    "vehicle.carlamotors.european_hgv",
+    "vehicle.carlamotors.firetruck",
+    "vehicle.chevrolet.impala",
+    "vehicle.citroen.c3",
+    "vehicle.diamondback.century",
+    "vehicle.dodge.charger_2020",
+    "vehicle.dodge.charger_police",
+    "vehicle.dodge.charger_police_2020",
+    "vehicle.ford.ambulance",
+    "vehicle.ford.crown",
+    "vehicle.ford.mustang",
+    "vehicle.gazelle.omafiets",
+    "vehicle.harley-davidson.low_rider",
+    "vehicle.jeep.wrangler_rubicon",
+    "vehicle.kawasaki.ninja",
+    "vehicle.lincoln.mkz_2017",
+    "vehicle.lincoln.mkz_2020",
+    "vehicle.mercedes.coupe",
+    "vehicle.mercedes.coupe_2020",
+    "vehicle.mercedes.sprinter",
+    "vehicle.micro.microlino",
+    "vehicle.mini.cooper_s",
+    "vehicle.mini.cooper_s_2021",
+    "vehicle.mitsubishi.fusorosa",
+    "vehicle.nissan.micra",
+    "vehicle.nissan.patrol",
+    "vehicle.nissan.patrol_2021",
+    "vehicle.seat.leon",
+    "vehicle.tesla.cybertruck",
+    "vehicle.tesla.model3",
+    "vehicle.toyota.prius",
+    "vehicle.vespa.zx125",
+    "vehicle.volkswagen.t2",
+    "vehicle.volkswagen.t2_2021",
+    "vehicle.yamaha.yzf"
+  ],
+  "first_spawn_points": [
+    {
+      "index": 0,
+      "x": -64.64,
+      "y": 24.47,
+      "z": 0.6,
+      "yaw": 0.16
+    },
+    {
+      "index": 1,
+      "x": -67.25,
+      "y": 27.96,
+      "z": 0.6,
+      "yaw": 0.16
+    },
+    {
+      "index": 2,
+      "x": -87.62,
+      "y": 12.97,
+      "z": 0.6,
+      "yaw": -179.84
+    },
+    {
+      "index": 3,
+      "x": -84.93,
+      "y": 16.47,
+      "z": 0.6,
+      "yaw": -179.84
+    },
+    {
+      "index": 4,
+      "x": -103.18,
+      "y": -14.43,
+      "z": 0.6,
+      "yaw": -89.36
+    },
+    {
+      "index": 5,
+      "x": -106.65,
+      "y": -17.07,
+      "z": 0.6,
+      "yaw": -89.36
+    },
+    {
+      "index": 6,
+      "x": -110.96,
+      "y": 59.69,
+      "z": 0.6,
+      "yaw": 90.64
+    },
+    {
+      "index": 7,
+      "x": -114.43,
+      "y": 56.85,
+      "z": 0.6,
+      "yaw": 90.64
+    },
+    {
+      "index": 8,
+      "x": -111.12,
+      "y": 72.9,
+      "z": 0.6,
+      "yaw": 90.64
+    },
+    {
+      "index": 9,
+      "x": -114.59,
+      "y": 70.06,
+      "z": 0.6,
+      "yaw": 90.64
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+# ==========================================
+# TrajPilot / CityFlow .gitignore
+# ==========================================
+
+# Big Data & Heavy Datasets (exceeds GitHub limits)
+data/
+archive/
+outputs/
+results/
+forensics/
+scratch/
+
+# Large Binary Model & Tensor Files
+*.npy
+*.npz
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.onnx
+*.pth
+*.pt
+*.zip
+*.tar.gz
+*.7z
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints/
+*-checkpoint.ipynb
+
+# Secrets & Environment Configurations
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+credentials.json
+
+# Operating System & IDE Files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+.agents/
