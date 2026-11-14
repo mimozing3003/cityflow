@@ -99,6 +99,35 @@ def extract_dataset_windows(csv_path, id_cols, time_col, x_col, y_col, stride=15
     val_keys = set(viable_trajs[n_train:n_train + n_val])
     test_keys = set(viable_trajs[n_train + n_val:])
 
+    split_keys = {"train": train_keys, "val": val_keys, "test": test_keys}
+    split_manifest = []
+    recording_to_splits = {}
+    for split_name, keys in split_keys.items():
+        for key in keys:
+            key_values = tuple(key) if isinstance(key, tuple) else (key,)
+            key_map = {name: value for name, value in zip(id_names, key_values)}
+            recording_id = str(key_map.get("run_index", key_map.get("recording_id", key_map.get("session_id", ""))))
+            vehicle_id = str(key_map.get("id", key_map.get("ID", key_map.get("vehicle_id", key_map.get("track_id", "")))))
+            trajectory_id = json.dumps(
+                [[name, str(key_map[name])] for name in id_names],
+                separators=(",", ":"),
+            )
+            split_manifest.append({
+                "dataset": csv_path.stem,
+                "split": split_name,
+                "trajectory_id": trajectory_id,
+                "recording_id": recording_id,
+                "vehicle_id": vehicle_id,
+                "source_file": csv_path.name,
+                "source_file_sha256": source_sha256,
+            })
+            if recording_id:
+                recording_to_splits.setdefault(recording_id, set()).add(split_name)
+
+    recording_split_overlap_count = sum(
+        len(split_names) > 1 for split_names in recording_to_splits.values()
+    )
+
     split_windows = {"train": ([], [], [], []), "val": ([], [], [], []), "test": ([], [], [], [])}
 
     for key in viable_trajs:
@@ -220,11 +249,14 @@ def extract_dataset_windows(csv_path, id_cols, time_col, x_col, y_col, stride=15
         "train_windows": len(data_dict["train"]["X"]),
         "val_windows": len(data_dict["val"]["X"]),
         "test_windows": len(data_dict["test"]["X"]),
-        "recording_id_available": any(bool(row["recording_id"]) for row in data_dict["test"]["metadata"]),
-        "distinct_test_recording_ids": len(set(row["recording_id"] for row in data_dict["test"]["metadata"] if row["recording_id"])),
-        "session_level_inference": "NOT_ESTABLISHED",
+        "recording_id_available": bool(recording_to_splits),
+        "distinct_recording_ids": len(recording_to_splits),
+        "recording_split_overlap_count": recording_split_overlap_count,
+        "recording_session_disjoint_split": bool(recording_to_splits) and recording_split_overlap_count == 0,
+        "session_level_inference": "NOT_ESTABLISHED_UNLESS_RECORDING_SPLIT_DISJOINT_AND_RUN_SEMANTICS_VERIFIED",
         "source_file_sha256": source_sha256,
     }
+    data_dict["split_manifest"] = split_manifest
     return data_dict, audit_row
 
 print("Extracting TGSIM Highway Datasets with Vehicle-Disjoint Splitting...")
@@ -765,13 +797,19 @@ np.savez_compressed(
     **{f"{d}_{m}": pred for d, preds in all_predictions.items() for m, pred in preds.items()}
 )
 
-# Save row-level test-window metadata and per-horizon predictions with lineage.
+# Save trajectory split manifests, window metadata for every partition, and test predictions.
 all_prediction_rows = []
 for dname, ddata in datasets_to_run:
+    split_manifest_df = pd.DataFrame(ddata["split_manifest"])
+    split_manifest_df.to_csv(MANIFEST_DIR / f"{dname}_trajectory_split_manifest.csv", index=False)
+
+    for split_name in ["train", "val", "test"]:
+        window_metadata = ddata[split_name]["metadata"]
+        metadata_frame = pd.DataFrame(build_window_metadata_rows(dname, split_name, window_metadata))
+        metadata_frame.to_csv(RESULTS_DIR / f"{dname}_{split_name}_window_metadata.csv", index=False)
+        metadata_frame.to_csv(TABLES_DIR / f"{dname}_{split_name}_window_metadata.csv", index=False)
+
     test_metadata = ddata["test"]["metadata"]
-    metadata_frame = pd.DataFrame(build_window_metadata_rows(dname, "test", test_metadata))
-    metadata_frame.to_csv(RESULTS_DIR / f"{dname}_test_window_metadata.csv", index=False)
-    metadata_frame.to_csv(TABLES_DIR / f"{dname}_test_window_metadata.csv", index=False)
     for model_name, prediction in all_predictions[dname].items():
         model_metadata = [{**row, "model_name": model_name} for row in test_metadata]
         all_prediction_rows.extend(
