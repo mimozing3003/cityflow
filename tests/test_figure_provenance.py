@@ -67,6 +67,12 @@ class FigureProvenanceTests(unittest.TestCase):
             rows[0]["speed_derived"]="nan"; self.write(samples,rows)
             with self.assertRaises(FigureProvenanceError): validate_inputs(summary,samples)
 
+    def test_generator_contains_no_synthetic_empirical_source(self):
+        source=(Path(__file__).resolve().parents[1]/"scripts/generate_supplementary_figures.py").read_text(encoding="utf-8")
+        self.assertNotIn("np.random.normal",source)
+        self.assertNotIn("corr_matrix = np.array",source)
+        self.assertIn("cross-domain pooling is prohibited",source.lower())
+
     def test_rejects_invalid_hash(self):
         with tempfile.TemporaryDirectory() as tmp:
             summary,samples=self.inputs(tmp)
