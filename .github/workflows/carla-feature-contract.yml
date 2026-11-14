@@ -1,0 +1,26 @@
+name: CARLA feature validity gate
+
+on:
+  pull_request:
+    paths:
+      - "carla_demo/05_feature_engine.py"
+      - "tests/**"
+      - ".github/workflows/carla-feature-contract.yml"
+  push:
+    branches:
+      - "audit/carla-feature-validity-gate"
+
+jobs:
+  feature-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test dependency
+        run: python -m pip install --disable-pip-version-check numpy
+      - name: Run CARLA feature contract tests
+        run: python -m unittest discover -s tests -v
