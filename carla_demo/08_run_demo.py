@@ -61,27 +61,41 @@ def run_demo(max_frames=1000, fps=10):
         t_last = time.perf_counter()
 
         while frame_count < max_frames:
-            # Advance simulation by exactly 1 step (10 FPS delta = 0.1s)
-            world.tick()
+            # Advance simulation by exactly one synchronous tick.
+            simulation_frame = world.tick()
             frame_count += 1
 
-            # Fetch synchronized sensor frame
-            frame_id, rgb_image = scene.get_latest_image(timeout=1.0)
-            if rgb_image is None:
-                continue
-
-            # Update feature engine
+            # Update features on every simulation tick, even if a camera frame is late.
+            # Skipping feature updates when images time out would silently stretch dt.
             all_actors = world.get_actors()
             current_feats, meta_dict = feature_engine.update(ego_veh, all_actors)
             history_16 = feature_engine.get_history_array()
 
-            # Run frozen GRU trajectory inference
-            pred_rel_traj, latency_ms = inference_engine.predict(history_16)
+            # Do not infer from get_history_array()'s repeated-first-frame warm-up padding.
+            history_ready = feature_engine.is_history_ready()
+            pred_rel_traj = None
+            latency_ms = None
+            screen_pred_points = []
 
-            # Project predicted trajectory to world and camera pixel coordinates
-            ego_tf = ego_veh.get_transform()
-            world_pred_points = inference_engine.project_to_world(pred_rel_traj, ego_tf)
-            screen_pred_points = inference_engine.project_to_camera_pixels(world_pred_points, camera_sensor)
+            if history_ready:
+                pred_rel_traj, latency_ms = inference_engine.predict(history_16)
+
+                # Project predictions relative to the current ego pose.
+                ego_tf = ego_veh.get_transform()
+                world_pred_points = inference_engine.project_to_world(pred_rel_traj, ego_tf)
+                screen_pred_points = inference_engine.project_to_camera_pixels(
+                    world_pred_points, camera_sensor
+                )
+            else:
+                ego_tf = ego_veh.get_transform()
+
+            # Match the camera image to the exact simulation frame. If unavailable,
+            # render the HUD without an image instead of pairing stale pixels with current telemetry.
+            frame_id, rgb_image = scene.get_image_for_frame(
+                simulation_frame, timeout=0.5
+            )
+            if frame_id != simulation_frame:
+                rgb_image = None
 
             # Record and project past breadcrumbs
             past_breadcrumbs.append(ego_tf.location)
@@ -96,6 +110,9 @@ def run_demo(max_frames=1000, fps=10):
             telemetry = {
                 "fps": live_fps,
                 "latency_ms": latency_ms,
+                "prediction_ready": history_ready,
+                "history_frames": len(feature_engine.feature_history),
+                "history_required": feature_engine.history_len,
                 "device": str(inference_engine.device).upper(),
                 "speed": float(current_feats[2]),  # speed_derived (m/s)
                 "num_vehicles": len(scene.npc_vehicles) + 1
@@ -116,7 +133,9 @@ def run_demo(max_frames=1000, fps=10):
 
             if frame_count % 50 == 0:
                 avail_count = sum(1 for m in meta_dict.values() if m.available)
-                print(f"[Frame {frame_count:4d}] FPS: {live_fps:4.1f} | Latency: {latency_ms:5.2f}ms | Features: {avail_count}/16 | Speed: {telemetry['speed']*3.6:4.1f} km/h")
+                latency_text = f"{latency_ms:.2f} ms" if latency_ms is not None else "not run (history warm-up)"
+                prediction_text = "READY" if history_ready else f"WARM-UP {len(feature_engine.feature_history)}/{feature_engine.history_len}"
+                print(f"[Frame {frame_count:4d}] FPS: {live_fps:4.1f} | Prediction: {prediction_text} | Latency: {latency_text} | Features: {avail_count}/16 | Speed: {telemetry['speed']*3.6:4.1f} km/h")
 
     except Exception as e:
         print(f"\n[ERROR] Demo interrupted by exception: {e}")
